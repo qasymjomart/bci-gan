@@ -29,24 +29,24 @@ class Generator(nn.Module):
         self.image_shape= image_shape
 
         self.linear = nn.Sequential(
-            nn.Linear(self.latent_dim, 128*8*38)
+            nn.Linear(self.latent_dim, 32*8*38)
         )
         
         self.conv_layers = nn.Sequential(
-            nn.BatchNorm2d(128),
+            nn.BatchNorm2d(32),
             nn.Upsample(scale_factor=2),
-            nn.BatchNorm2d(128),
+            nn.BatchNorm2d(32),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(128, 64, 3, stride=1, padding=1),
-            nn.BatchNorm2d(64, 0.8),
+            nn.Conv2d(32, 16, 3, stride=1, padding=1),
+            nn.BatchNorm2d(16, 0.8),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(64, self.image_shape[0], 3, stride=1, padding=1),
+            nn.Conv2d(16, self.image_shape[0], 3, stride=1, padding=1),
             nn.Tanh()
         )
 
     def forward(self, z):
         x = self.linear(z)
-        x = x.view(x.shape[0], 128, 8, 38)
+        x = x.view(x.shape[0], 32, 8, 38)
         b = self.conv_layers(x)
         return b
 
@@ -65,14 +65,14 @@ class Discriminator(nn.Module):
             return block
 
         self.model = nn.Sequential(
-            *discriminator_block(self.image_shape[0], 128, bn=False),
-            *discriminator_block(128, 64),
-            *discriminator_block(64, 32),
+            *discriminator_block(self.image_shape[0], 32, bn=False),
+            *discriminator_block(32, 16),
+            *discriminator_block(16, 16),
             nn.Dropout(0.25)
         )
 
         self.fc = nn.Sequential(
-                nn.Linear(32*2*10, 1),
+                nn.Linear(16*2*10, 1),
                 nn.Sigmoid()
             )
         
@@ -166,7 +166,7 @@ def train_model(train_loader, generator, discriminator, optimizer_generator, opt
                     % (epoch, num_epochs, i, len(train_loader), d_loss.item(), g_loss.item())
                     )
                     
-                    r, c = 5,5
+                    r, c = 4,4
                     fig,axarr = plt.subplots(r,c)
                     cnt = 0
                     for ii in range(r):
@@ -176,3 +176,5 @@ def train_model(train_loader, generator, discriminator, optimizer_generator, opt
                             cnt += 1
                     fig.savefig("wan_gp_generated_%d.png" % epoch)
                     plt.close()
+                    
+    return generator, discriminator
