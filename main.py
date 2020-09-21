@@ -42,7 +42,7 @@ image_shape = (depth, height, width)
 
 # Training parameters
 batch_size = 32
-lr = 0.0002
+lr = 0.0001
 num_epochs= 50
 lambda_gp = 10
 n_discriminator = 5
@@ -70,6 +70,7 @@ def gan_train_generate(signal_type_to_generate = 'Target'):
     scaler.fit(x_train)
     x_train = scaler.transform(x_train)
     
+    # Moving data to torch
     # x_train = np.expand_dims(x_train, axis=1)[:, :, :76, :]        
     x_train = torch.unsqueeze(torch.from_numpy(x_train), axis=1)[:,:,:,:76]
     y_train = torch.ones((x_train.shape[0],1))
@@ -78,7 +79,10 @@ def gan_train_generate(signal_type_to_generate = 'Target'):
     
     train_loader = DataLoader(train_dat, batch_size = batch_size, shuffle = True)
         
-    # Model initialization
+    # =============================================================================
+    #     Model initialization
+    # =============================================================================
+    
     generator = Generator(latent_dim, image_shape)
     discriminator = Discriminator(latent_dim, image_shape)
     
@@ -86,18 +90,22 @@ def gan_train_generate(signal_type_to_generate = 'Target'):
         generator.cuda()
         discriminator.cuda()
     
-    optimizer_generator = torch.optim.RMSprop(generator.parameters(), lr=lr)
-    optimizer_discriminator = torch.optim.RMSprop(discriminator.parameters(), lr=lr)
+    optimizer_generator = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0, 0.9))
+    optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0, 0.9))
     
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
     
-    # Model Training
+    # =============================================================================
+    #     Model Training
+    # =============================================================================
     
     generator, discriminator = train_model(train_loader, generator, discriminator, optimizer_generator, 
                 optimizer_discriminator, num_epochs, latent_dim, lambda_gp, n_discriminator, 
                 Tensor, batch_size, saving_interval)
     
-    # Generate samples from trained model
+    # =============================================================================
+    #     Generate samples from trained model
+    # =============================================================================
     generated_erp = np.empty((x_train.shape[0], image_shape[0], image_shape[1], image_shape[2]))
     del train_loader, train_dat
     
@@ -117,8 +125,10 @@ nontarget_real, nontarget_generated = gan_train_generate('NonTarget')
 
 #%% Let's do some quality tests
 
-# GAN-test
-from gan_test import gan_test, t_sne
+# =============================================================================
+# GAN-test (accuracy test: train on generated samples, test on real samples)
+# =============================================================================
+from gan_test import gan_test
 
 real_combined = {'x': np.concatenate((target_real, nontarget_real)), 
                      'y': np.concatenate((np.ones(target_real.shape[0],), np.zeros(nontarget_real.shape[0],)))}
@@ -138,9 +148,12 @@ print(accuracy_LDA, accuracy_LR, accuracy_SVM, accuracy_CNN)
 
 
 #%% Visualization t-SNE test
+from gan_test import t_sne, t_sne_one_data
 
-t_sne(real_combined, generated_combined)
+sns_plot = t_sne(real_combined, generated_combined)
 
+# sns_plot = t_sne_one_data(real_combined)
+# sns_plot = t_sne_one_data(generated_combined)
 
 
 

@@ -170,29 +170,87 @@ class DCNN(nn.Module):
 #%% t-SNE Visualisation
 
 def t_sne(real_data, generated_data):
+    """
+    Calculates t-SNE for data and plots its
+
+    Parameters
+    ----------
+    real_data : TYPE
+        Real EEG data given as DICT ['x','y'].
+    generated_data : TYPE
+        Generated EEG data given as DICT ['x','y'].
+
+    Returns
+    -------
+    sns_plot : SNS PLOT
+        Seaborn plot with t-SNE mapped.
+
+    """
     
     x_gen, y_gen = generated_data['x'], generated_data['y']
     x_real, y_real = real_data['x'], real_data['y']
-    print('Hi!1')
+    
+    for ii in range(y_gen.shape[0]):
+        if y_gen[ii] == 0:
+            y_gen[ii] = 0
+        elif y_gen[ii] == 1:
+            y_gen[ii] = 1
+    
     for ii in range(y_real.shape[0]):
         if y_real[ii] == 0:
             y_real[ii] = 2
         elif y_real[ii] == 1:
             y_real[ii] = 3
-    print('Hi!2')
     # reshape data to (n_samples, n_features)
     x_gen, x_real = np.reshape(x_gen, (x_gen.shape[0], x_gen.shape[1]*x_gen.shape[2])), np.reshape(x_real, (x_real.shape[0], x_real.shape[1]*x_real.shape[2]))
     
     # concatenate all to one x
     X, y = np.concatenate((x_gen, x_real)), np.concatenate((y_gen, y_real))
-    print('Hi!3')
     tsne = TSNE()
     X_embedded = tsne.fit_transform(X)
-    print('Hi!4')
-    sns_plot = sns.scatterplot(X_embedded[:,0], X_embedded[:,1], hue=y, legend='full', palette=palette)
+    
+    palette = sns.color_palette("bright", 4)
+    sns_plot = sns.scatterplot(X_embedded[:,0], X_embedded[:,1], hue=y, palette=palette)
+    new_labels = ['NonTarget Gen', 'Target Gen', 'NonTarget Real', 'Target Real']
+    for t, l in zip(sns_plot.legend().texts, new_labels): t.set_text(l)
     fig = sns_plot.get_figure()
     fig.savefig('tSNE.png')
+    return sns_plot
+
+def t_sne_one_data(real_data):
+    """
+     The same as t_sne, but only for one data
+
+    Parameters
+    ----------
+    real_data : DICT
+        EEG data given as DICT ['x','y'].
+
+    Returns
+    -------
+    sns_plot : SNS
+        Seabron plot with t_SNE mapped.
+
+    """
     
+    x_real, y_real = real_data['x'], real_data['y']
+    print('Starting fitting t-SNE')
+    
+    # reshape data to (n_samples, n_features)
+    x_real = np.reshape(x_real, (x_real.shape[0], x_real.shape[1]*x_real.shape[2]))
+    
+    # concatenate all to one x
+    X, y = x_real, y_real
+    tsne = TSNE()
+    X_embedded = tsne.fit_transform(X)
+    print('Finished fitting t-SNE.')
+    palette = sns.color_palette("bright", 2)
+    sns_plot = sns.scatterplot(X_embedded[:,0], X_embedded[:,1], hue=y, palette=palette)
+    new_labels = ['NonTarget', 'Target']
+    for t, l in zip(sns_plot.legend().texts, new_labels): t.set_text(l)
+    fig = sns_plot.get_figure()
+    fig.savefig('tSNE_one_data.png')
+    return sns_plot
 
 #%% KL divergence
 
