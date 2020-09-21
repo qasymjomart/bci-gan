@@ -157,7 +157,7 @@ class DCNN(nn.Module):
         )
 
         self.fc = nn.Sequential(
-                nn.Linear(32*19*4, 2),
+                nn.Linear(32*2*19, 2),
                 nn.Sigmoid()
             )
         

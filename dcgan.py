@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sat Sep 19 18:42:43 2020
+Created on Mon Sep 21 22:36:05 2020
 
 @author: Kassymzhomart Kunanbayev aka @qasymjomart
-
-Credits are given to https://github.com/eriklindernoren/PyTorch-GAN/blob/master/implementations/wgan_gp/wgan_gp.py
-
 
 """
 import os
@@ -67,9 +64,9 @@ class Discriminator(nn.Module):
             return block
 
         self.model = nn.Sequential(
-            *discriminator_block(self.image_shape[0], 32, bn=False),
-            *discriminator_block(32, 16, bn=False),
-            *discriminator_block(16, 16, bn=False),
+            *discriminator_block(self.image_shape[0], 32, bn=True),
+            *discriminator_block(32, 16, bn=True),
+            *discriminator_block(16, 16, bn=True),
             nn.Dropout(0.25)
         )
 
@@ -84,81 +81,47 @@ class Discriminator(nn.Module):
         b = self.fc(out)
         return b
 
+def weights_init_normal(m):
+    classname = m.__class__.__name__
+    if classname.find("Conv") != -1:
+        torch.nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find("BatchNorm2d") != -1:
+        torch.nn.init.normal_(m.weight.data, 1.0, 0.02)
+        torch.nn.init.constant_(m.bias.data, 0.0)
 
-def compute_gradient_penalty(D, real_samples, fake_samples, Tensor):
-    """Calculates the gradient penalty loss for WGAN GP"""
-    # Random weight term for interpolation between real and fake samples
-    
-    alpha = Tensor(np.random.random((real_samples.size(0), 1, 1, 1)))
-    # Get random interpolation between real and fake samples
-    interpolates = (alpha * real_samples + ((1 - alpha) * fake_samples)).requires_grad_(True)
-    d_interpolates = D(interpolates)
-    fake = Variable(Tensor(real_samples.shape[0], 1).fill_(1.0), requires_grad=False)
-    # Get gradient w.r.t. interpolates
-    gradients = autograd.grad(
-        outputs=d_interpolates,
-        inputs=interpolates,
-        grad_outputs=fake,
-        create_graph=True,
-        retain_graph=True,
-        only_inputs=True,
-    )[0]
-    gradients = gradients.view(gradients.size(0), -1)
-    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
-    return gradient_penalty
+def train_model(train_loader, generator, discriminator, optimizer_generator, optimizer_discriminator, adversarial_loss, num_epochs, latent_dim, Tensor, batch_size = 32, saving_interval = 50):
 
-def train_model(train_loader, generator, discriminator, optimizer_generator, optimizer_discriminator, num_epochs, latent_dim, lambda_gp, n_discriminator, Tensor, batch_size = 32, saving_interval = 50):
-    
-    
     for epoch in range(num_epochs):
         for i, (edata, _) in enumerate(train_loader):
+            
+            real_labels = Variable(Tensor(edata.shape[0], 1).fill_(1.0), requires_grad=False)
+            fake_labels = Variable(Tensor(edata.shape[0], 1).fill_(0.0), requires_grad=False)
     
             # Configure input
             real_images = Variable(edata.type(Tensor))
     
+            # -----------------
+            #  Train Generator
+            # -----------------
+            optimizer_generator.zero_grad()
+            z = Variable(Tensor(np.random.normal(0, 1, (real_images.shape[0], latent_dim))))
+            fake_images = generator(z)
+            g_loss = adversarial_loss(discriminator(fake_images), real_labels)
+            g_loss.backward()
+            optimizer_generator.step()
+            
             # ---------------------
             #  Train Discriminator
             # ---------------------
-    
-            optimizer_discriminator.zero_grad()
-    
-            # Sample noise as generator input
-            z = Variable(Tensor(np.random.normal(0, 1, (real_images.shape[0], latent_dim))))
-    
-            # Generate a batch of images
-            fake_images = generator(z)
-    
-            # Real images
+            optimizer_discriminator.zero_grad()    
             real_validity = discriminator(real_images)
-            # Fake images
-            fake_validity = discriminator(fake_images)
-            # Gradient penalty
-            gradient_penalty = compute_gradient_penalty(discriminator, real_images.data, fake_images.data, Tensor)
-            # Adversarial loss
-            d_loss = -real_validity.mean() + fake_validity.mean() + lambda_gp * gradient_penalty
-    
+            fake_validity = discriminator(fake_images.detach())
+            d_loss = (adversarial_loss(real_validity, real_labels) + adversarial_loss(fake_validity, fake_labels))/2
             d_loss.backward()
             optimizer_discriminator.step()
     
-    
-            # Train the generator every n_discriminator steps
-            if i % n_discriminator == 0:
-    
-                # -----------------
-                #  Train Generator
-                # -----------------
-                optimizer_generator.zero_grad()
-                # Generate a batch of images
-                fake_imgs = generator(z)
-                # Loss measfures generator's ability to fool the discriminator
-                # Train on fake images
-                fake_validity = discriminator(fake_imgs)
-                g_loss = -fake_validity.mean()
-    
-                g_loss.backward()
-                optimizer_generator.step()
-    
-    
+ 
+
         if epoch % saving_interval == 0:
             # save_image(fake_images.data[:25], "wgan_gp_generated_%d.png" % epoch, nrow=5, normalize=False)
             # save_image(real_images.data[:25], "wgan_gp_real_%d.png" % epoch, nrow=5, normalize=False)
@@ -176,7 +139,7 @@ def train_model(train_loader, generator, discriminator, optimizer_generator, opt
                     axarr[ii,jj].imshow(fake_images[cnt, 0,:,:].cpu().data.numpy())
                     axarr[ii,jj].axis('off')
                     cnt += 1
-            fig.savefig("wan_gp_generated_%d.png" % epoch)
+            fig.savefig("dcgan_generated_%d.png" % epoch)
             plt.close()
             
             r, c = 4,4
@@ -187,8 +150,8 @@ def train_model(train_loader, generator, discriminator, optimizer_generator, opt
                     axarr[ii,jj].imshow(real_images[cnt, 0,:,:].cpu().data.numpy())
                     axarr[ii,jj].axis('off')
                     cnt += 1
-            fig.savefig("wan_gp_real_%d.png" % epoch)
+            fig.savefig("dcgan_real_%d.png" % epoch)
             plt.close()
-                    
-                    
+                
+                
     return generator, discriminator

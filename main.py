@@ -24,8 +24,8 @@ import torch
 torch.cuda.empty_cache()
 
 from data_import import data_pooler, NDStandardScaler
-# !!! Import here the model you need, follow: from <model_name> import Generator, Discriminator, train_model
 from wgan_gp import Generator, Discriminator, train_model
+from dcgan import Generator, Discriminator, train_model, weights_init_normal
 
 cuda = True if torch.cuda.is_available() else False
 print('cuda: ', cuda)
@@ -35,24 +35,25 @@ torch.manual_seed(0)
 
 # Data parameters
 latent_dim = 100
-height = 16
+height = 8
 width = 76
 depth = 1
 image_shape = (depth, height, width)
 
 # Training parameters
+gan_type = 'dcgan'
 batch_size = 32
-lr = 0.0001
+lr = 0.0002
 num_epochs= 50
 lambda_gp = 10
 n_discriminator = 5
-saving_interval = 50
+saving_interval = 25
 
 #%%
 
-def gan_train_generate(signal_type_to_generate = 'Target'):
+def gan_train_generate(gan_type = 'dcgan', signal_type_to_generate = 'Target'):
     
-    ss1 = data_pooler(dataset_name = 'TenHealthyData', augment = False)
+    ss1 = data_pooler(dataset_name = 'ALSdata', augment = False)
     target = 1 if signal_type_to_generate == 'Target' else 0
     
     for ii in range(len(ss1)):
@@ -86,22 +87,50 @@ def gan_train_generate(signal_type_to_generate = 'Target'):
     generator = Generator(latent_dim, image_shape)
     discriminator = Discriminator(latent_dim, image_shape)
     
-    if cuda:
-        generator.cuda()
-        discriminator.cuda()
-    
-    optimizer_generator = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0, 0.9))
-    optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0, 0.9))
-    
-    Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
-    
-    # =============================================================================
-    #     Model Training
-    # =============================================================================
-    
-    generator, discriminator = train_model(train_loader, generator, discriminator, optimizer_generator, 
-                optimizer_discriminator, num_epochs, latent_dim, lambda_gp, n_discriminator, 
-                Tensor, batch_size, saving_interval)
+    # Depending on type of GAN, make training:
+    if gan_type == 'dcgan':
+        adversarial_loss = torch.nn.BCELoss()
+        
+        if cuda:
+            generator.cuda()
+            discriminator.cuda()
+            adversarial_loss.cuda()
+        
+        generator.apply(weights_init_normal)
+        discriminator.apply(weights_init_normal)
+        
+        optimizer_generator = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0.5, 0.9))
+        optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0.5, 0.9))
+        
+        Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+        
+        # =============================================================================
+        #     Model Training
+        # =============================================================================
+        
+        generator, discriminator = train_model(train_loader, generator, discriminator, optimizer_generator, 
+                    optimizer_discriminator, adversarial_loss, num_epochs, latent_dim, 
+                    Tensor, batch_size, saving_interval)     
+        
+        
+    elif gan_type == 'wgan_gp':
+        
+        if cuda:
+            generator.cuda()
+            discriminator.cuda()
+        
+        optimizer_generator = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0, 0.9))
+        optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0, 0.9))
+        
+        Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+        
+        # =============================================================================
+        #     Model Training
+        # =============================================================================
+        
+        generator, discriminator = train_model(train_loader, generator, discriminator, optimizer_generator, 
+                    optimizer_discriminator, num_epochs, latent_dim, lambda_gp, n_discriminator, 
+                    Tensor, batch_size, saving_interval)
     
     # =============================================================================
     #     Generate samples from trained model
@@ -119,8 +148,8 @@ def gan_train_generate(signal_type_to_generate = 'Target'):
     return np.squeeze(x_train.cpu().data.numpy(), axis=1) , np.squeeze(generated_erp, axis=1)
 
 
-target_real, target_generated = gan_train_generate('Target')
-nontarget_real, nontarget_generated = gan_train_generate('NonTarget')
+target_real, target_generated = gan_train_generate('dcgan', 'Target')
+nontarget_real, nontarget_generated = gan_train_generate('dcgan', 'NonTarget')
 
 
 #%% Let's do some quality tests
