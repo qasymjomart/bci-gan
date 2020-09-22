@@ -24,7 +24,7 @@ import torch
 torch.cuda.empty_cache()
 
 from data_import import data_pooler, NDStandardScaler
-from wgan_gp import Generator, Discriminator, train_model
+# from wgan_gp import Generator, Discriminator, train_model
 from dcgan import Generator, Discriminator, train_model, weights_init_normal
 
 cuda = True if torch.cuda.is_available() else False
@@ -35,7 +35,7 @@ torch.manual_seed(0)
 
 # Data parameters
 latent_dim = 100
-height = 8
+height = 16
 width = 76
 depth = 1
 image_shape = (depth, height, width)
@@ -43,17 +43,17 @@ image_shape = (depth, height, width)
 # Training parameters
 gan_type = 'dcgan'
 batch_size = 32
-lr = 0.0002
+lr = 0.00005
 num_epochs= 50
 lambda_gp = 10
 n_discriminator = 5
-saving_interval = 25
+saving_interval = 5
 
 #%%
 
 def gan_train_generate(gan_type = 'dcgan', signal_type_to_generate = 'Target'):
     
-    ss1 = data_pooler(dataset_name = 'ALSdata', augment = False)
+    ss1 = data_pooler(dataset_name = 'TenHealthyData', augment = False)
     target = 1 if signal_type_to_generate == 'Target' else 0
     
     for ii in range(len(ss1)):
@@ -67,10 +67,15 @@ def gan_train_generate(gan_type = 'dcgan', signal_type_to_generate = 'Target'):
     # =============================================================================
     # Standard scaling
     # =============================================================================
-    scaler = NDStandardScaler()
-    scaler.fit(x_train)
-    x_train = scaler.transform(x_train)
+    # scaler = NDStandardScaler()
+    # scaler.fit(x_train)
+    # x_train = scaler.transform(x_train)
     
+    # =============================================================================
+    # Min-max normalization
+    # =============================================================================
+    x_train = (x_train - np.min(x_train))/(np.max(x_train) - np.min(x_train))    
+
     # Moving data to torch
     # x_train = np.expand_dims(x_train, axis=1)[:, :, :76, :]        
     x_train = torch.unsqueeze(torch.from_numpy(x_train), axis=1)[:,:,:,:76]
@@ -99,8 +104,8 @@ def gan_train_generate(gan_type = 'dcgan', signal_type_to_generate = 'Target'):
         generator.apply(weights_init_normal)
         discriminator.apply(weights_init_normal)
         
-        optimizer_generator = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0.5, 0.9))
-        optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0.5, 0.9))
+        optimizer_generator = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0.5, 0.999))
+        optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
         
         Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
         
