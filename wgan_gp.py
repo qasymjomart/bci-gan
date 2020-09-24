@@ -29,26 +29,30 @@ class Generator(nn.Module):
         self.image_shape= image_shape
 
         self.linear = nn.Sequential(
-            nn.Linear(self.latent_dim, 32*2*19)
+            nn.Linear(self.latent_dim, 128*4*19)
         )
         
         self.conv_layers = nn.Sequential(
-            nn.BatchNorm2d(32),
-            nn.Upsample(scale_factor=4),
-            nn.ReLU(),
-            nn.BatchNorm2d(32),
+            nn.BatchNorm2d(128),
+            nn.ConvTranspose2d(128, 128, kernel_size=2, stride=2),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True),
+            
+            # nn.Conv2d(128, 128, 3, stride=1, padding=1),
+            # nn.BatchNorm2d(128, 0.8),
             # nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(32, 16, 3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.BatchNorm2d(16, 0.8),
-            # nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(16, self.image_shape[0], 3, stride=1, padding=1),
+            
+            nn.ConvTranspose2d(128, 128, kernel_size=2, stride=2),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv2d(128, self.image_shape[0], 3, stride=1, padding=1),
             nn.Tanh()
         )
 
     def forward(self, z):
         x = self.linear(z)
-        x = x.view(x.shape[0], 32, 2, 19)
+        x = x.view(x.shape[0], 128, 4, 19)
         b = self.conv_layers(x)
         return b
 
@@ -67,16 +71,16 @@ class Discriminator(nn.Module):
             return block
 
         self.model = nn.Sequential(
-            *discriminator_block(self.image_shape[0], 32, bn=False),
-            *discriminator_block(32, 16, bn=False),
-            *discriminator_block(16, 16, bn=False),
+            *discriminator_block(self.image_shape[0], 128, bn=False),
+            *discriminator_block(128, 128, bn=False),
+            *discriminator_block(128, 128, bn=False),
             nn.Dropout(0.25)
         )
 
         self.fc = nn.Sequential(
-                nn.Linear(16*1*10, 1),
-                nn.Sigmoid()
-            )
+                nn.Linear(128*2*10, 1)
+                # nn.Linear(256, 1)
+                )
         
     def forward(self, x):
         out = self.model(x)
@@ -107,8 +111,20 @@ def compute_gradient_penalty(D, real_samples, fake_samples, Tensor):
     gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
     return gradient_penalty
 
+def plot_losses(g_losses, d_losses):
+    plt.figure(figsize=(10,5))
+    plt.title("G and D loss during training")
+    plt.plot(g_losses, label="G")
+    plt.plot(d_losses, label="D")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.savefig("loss.png")
+    plt.close()
+
 def train_model(train_loader, generator, discriminator, optimizer_generator, optimizer_discriminator, num_epochs, latent_dim, lambda_gp, n_discriminator, Tensor, batch_size = 32, saving_interval = 50):
-    
+    g_losses = []
+    d_losses = []
     
     for epoch in range(num_epochs):
         for i, (edata, _) in enumerate(train_loader):
@@ -119,46 +135,48 @@ def train_model(train_loader, generator, discriminator, optimizer_generator, opt
             # ---------------------
             #  Train Discriminator
             # ---------------------
-    
-            optimizer_discriminator.zero_grad()
-    
-            # Sample noise as generator input
-            z = Variable(Tensor(np.random.normal(0, 1, (real_images.shape[0], latent_dim))))
-    
-            # Generate a batch of images
-            fake_images = generator(z)
-    
-            # Real images
-            real_validity = discriminator(real_images)
-            # Fake images
-            fake_validity = discriminator(fake_images)
-            # Gradient penalty
-            gradient_penalty = compute_gradient_penalty(discriminator, real_images.data, fake_images.data, Tensor)
-            # Adversarial loss
-            d_loss = -real_validity.mean() + fake_validity.mean() + lambda_gp * gradient_penalty
-    
-            d_loss.backward()
-            optimizer_discriminator.step()
-    
-    
-            # Train the generator every n_discriminator steps
-            if i % n_discriminator == 0:
-    
-                # -----------------
-                #  Train Generator
-                # -----------------
-                optimizer_generator.zero_grad()
+            # Train discriminator n_discriminator times
+            for _ in range(n_discriminator):
+                optimizer_discriminator.zero_grad()
+        
+                # Sample noise as generator input
+                z = Variable(Tensor(np.random.normal(0, 1, (real_images.shape[0], latent_dim))))
+        
                 # Generate a batch of images
-                fake_imgs = generator(z)
-                # Loss measfures generator's ability to fool the discriminator
-                # Train on fake images
-                fake_validity = discriminator(fake_imgs)
-                g_loss = -fake_validity.mean()
+                fake_images = generator(z)
+        
+                # Real images
+                real_validity = discriminator(real_images)
+                # Fake images
+                fake_validity = discriminator(fake_images)
+                # Gradient penalty
+                gradient_penalty = compute_gradient_penalty(discriminator, real_images.data, fake_images.data, Tensor)
+                # Adversarial loss
+                d_loss = -real_validity.mean() + fake_validity.mean() + lambda_gp * gradient_penalty
+        
+                d_loss.backward()
+                optimizer_discriminator.step()
     
-                g_loss.backward()
-                optimizer_generator.step()
     
+
+            # -----------------
+            #  Train Generator
+            # -----------------
+            optimizer_generator.zero_grad()
+            z = Variable(Tensor(np.random.normal(0, 1, (real_images.shape[0], latent_dim))))
+            # Generate a batch of images
+            fake_imgs = generator(z)
+            # Loss measfures generator's ability to fool the discriminator
+            # Train on fake images
+            fake_validity = discriminator(fake_imgs)
+            g_loss = -fake_validity.mean()
+
+            g_loss.backward()
+            optimizer_generator.step()
     
+        g_losses.append(g_loss.item())
+        d_losses.append(d_loss.item())
+        
         if epoch % saving_interval == 0:
             # save_image(fake_images.data[:25], "wgan_gp_generated_%d.png" % epoch, nrow=5, normalize=False)
             # save_image(real_images.data[:25], "wgan_gp_real_%d.png" % epoch, nrow=5, normalize=False)

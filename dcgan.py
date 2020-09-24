@@ -100,6 +100,7 @@ def plot_losses(g_losses, d_losses):
     plt.ylabel("Loss")
     plt.legend()
     plt.savefig("loss.png")
+    plt.close()
     
 
 def train_model(train_loader, generator, discriminator, optimizer_generator, optimizer_discriminator, adversarial_loss, num_epochs, latent_dim, Tensor, batch_size = 32, saving_interval = 50):
@@ -141,11 +142,10 @@ def train_model(train_loader, generator, discriminator, optimizer_generator, opt
             g_loss.backward()
             d_gz_2 = fake_g_validity.mean().item()
             optimizer_generator.step()      
-            
-            g_losses.append(g_loss.item())
-            d_losses.append(d_loss.item())
  
-
+        g_losses.append(g_loss.item())
+        d_losses.append(d_loss.item())
+            
         if epoch % saving_interval == 0:
             # save_image(fake_images.data[:25], "wgan_gp_generated_%d.png" % epoch, nrow=5, normalize=False)
             # save_image(real_images.data[:25], "wgan_gp_real_%d.png" % epoch, nrow=5, normalize=False)
