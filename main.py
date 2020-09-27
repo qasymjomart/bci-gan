@@ -23,8 +23,7 @@ from torch.autograd import Variable
 import torch
 torch.cuda.empty_cache()
 
-from data_import import data_pooler, NDStandardScaler
-# Comment out the needed model and comment the rest of import lines
+from data_import import Data_loader
 
 cuda = True if torch.cuda.is_available() else False
 # if cuda has runtime error, then run "nvidia-modprobe -u" in terminal (first download nvidia-modprobe in ubuntu)
@@ -41,7 +40,7 @@ depth = 1
 image_shape = (depth, height, width)
 
 # Training parameters
-gan_type = 'wgan_gp'
+gan_type = 'dcgan'
 if gan_type == 'wgan_gp':
     from wgan_gp import Generator, Discriminator, train_model
 elif gan_type == 'dcgan':
@@ -56,35 +55,13 @@ saving_interval = 5
 
 #%%
 
-def gan_train_generate(sub_idxs = [0,1,2,3,4,5,6,7,8,9], 
-                       no_samples_to_generate = 1152,
+def gan_train_generate(no_samples_to_generate = 1152,
                        gan_type = 'dcgan', 
                        signal_type_to_generate = 'Target'):
     
-    ss1 = data_pooler(dataset_name = 'TenHealthyData', augment = False)
-    target = 1 if signal_type_to_generate == 'Target' else 0
+    data_load = Data_loader(dataset_name = 'TenHealthyData')
+    x_train = data_load.pool_one_class(signal_type_to_generate, normalize=True)
     
-    if len(sub_idxs) == 1:
-        x_train = np.array(ss1[sub_idxs[0]][0]['xtrain'][ss1[sub_idxs[0]][0]['ytrain'] == target][:288])
-    else:
-        for ii in sub_idxs:
-            if ii == 0:
-                x_train = np.array(ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == target][:288])
-            else:
-                x_train = np.concatenate((x_train, ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == target][:288]))
-    del ss1
-    
-    # =============================================================================
-    # Standard scaling
-    # =============================================================================
-    # scaler = NDStandardScaler()
-    # x_train = scaler.fit_transform(x_train)
-    
-    # =============================================================================
-    # Min-max normalization
-    # =============================================================================
-    x_train = (x_train - np.min(x_train))/(np.max(x_train) - np.min(x_train))    
-
     # Moving data to torch
     # x_train = np.expand_dims(x_train, axis=1)[:, :, :76, :]        
     x_train = torch.unsqueeze(torch.from_numpy(x_train), axis=1)[:,:,:,:76]
@@ -133,8 +110,8 @@ def gan_train_generate(sub_idxs = [0,1,2,3,4,5,6,7,8,9],
             generator.cuda()
             discriminator.cuda()
         
-        optimizer_generator = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0.5, 0.5))
-        optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0.5, 0.5))
+        optimizer_generator = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0.5, 0.999))
+        optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
         
         Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
         
@@ -160,15 +137,13 @@ def gan_train_generate(sub_idxs = [0,1,2,3,4,5,6,7,8,9],
     
     return np.squeeze(x_train.cpu().data.numpy(), axis=1) , np.squeeze(generated_erp, axis=1)
 
-#%%
-
-subs = [0,1,3,4,5,6,7,8,9]
-# for sub_idx in subs:
-target_real, target_generated = gan_train_generate(subs, 1152, gan_type, 'Target')
-nontarget_real, nontarget_generated = gan_train_generate(subs, 1152, gan_type, 'NonTarget')
-
 
 #%% Let's do some quality tests
+
+subs = [0,1,2,3,4,5,6,7,8,9]
+no_samples_to_generate = 1140
+target_real, target_generated = gan_train_generate(subs, 1440, gan_type, 'Target')
+nontarget_real, nontarget_generated = gan_train_generate(subs, 1440, gan_type, 'NonTarget')
 
 # =============================================================================
 # GAN-test (accuracy test: train on generated samples, test on real samples)
@@ -187,18 +162,22 @@ accuracy_SVM = gan_test(real_combined, generated_combined, 'SVM')
 accuracy_CNN = gan_test(real_combined, generated_combined, 'DCNN')
 
 print(accuracy_LDA, accuracy_LR, accuracy_SVM, accuracy_CNN)
+with open('gan_test_results.txt', 'w') as f:
+    f.write('GAN type: ' + gan_type)
+    f.write('accuracy on LDA: ' + str(accuracy_LDA))
+    f.write('accuracy on LR: ' + str(accuracy_LR))
+    f.write('accuracy on SVM ' + str(accuracy_SVM))
+    f.write('accuracy on CNN ' + str(accuracy_CNN))
 
 
-# KL-divergence test
-
-
-#%% Visualization t-SNE test
+# Visualization t-SNE test
 from gan_test import t_sne, t_sne_one_data
 
 sns_plot = t_sne(real_combined, generated_combined)
 
 # sns_plot = t_sne_one_data(real_combined)
 # sns_plot = t_sne_one_data(generated_combined)
+
 
 
 

@@ -29,30 +29,30 @@ class Generator(nn.Module):
         self.image_shape= image_shape
 
         self.linear = nn.Sequential(
-            nn.Linear(self.latent_dim, 128*4*19)
+            nn.Linear(self.latent_dim, 32*4*19)
         )
         
         self.conv_layers = nn.Sequential(
-            nn.BatchNorm2d(128),
-            nn.ConvTranspose2d(128, 128, kernel_size=2, stride=2),
-            nn.BatchNorm2d(128),
+            nn.BatchNorm2d(32),
+            nn.ConvTranspose2d(32, 32, kernel_size=2, stride=2),
+            nn.BatchNorm2d(32),
             nn.LeakyReLU(0.2, inplace=True),
             
             # nn.Conv2d(128, 128, 3, stride=1, padding=1),
             # nn.BatchNorm2d(128, 0.8),
             # nn.LeakyReLU(0.2, inplace=True),
             
-            nn.ConvTranspose2d(128, 128, kernel_size=2, stride=2),
-            nn.BatchNorm2d(128),
+            nn.ConvTranspose2d(32, 32, kernel_size=2, stride=2),
+            nn.BatchNorm2d(32),
             nn.LeakyReLU(0.2, inplace=True),
 
-            nn.Conv2d(128, self.image_shape[0], 3, stride=1, padding=1),
+            nn.Conv2d(32, self.image_shape[0], 3, stride=1, padding=1),
             nn.Tanh()
         )
 
     def forward(self, z):
         x = self.linear(z)
-        x = x.view(x.shape[0], 128, 4, 19)
+        x = x.view(x.shape[0], 32, 4, 19)
         b = self.conv_layers(x)
         return b
 
@@ -71,14 +71,14 @@ class Discriminator(nn.Module):
             return block
 
         self.model = nn.Sequential(
-            *discriminator_block(self.image_shape[0], 128, bn=False),
-            *discriminator_block(128, 128, bn=False),
-            *discriminator_block(128, 128, bn=False),
+            *discriminator_block(self.image_shape[0], 32, bn=False),
+            *discriminator_block(32, 16, bn=False),
+            *discriminator_block(16, 16, bn=False),
             nn.Dropout(0.25)
         )
 
         self.fc = nn.Sequential(
-                nn.Linear(128*2*10, 1)
+                nn.Linear(16*2*10, 1)
                 # nn.Linear(256, 1)
                 )
         
@@ -119,7 +119,7 @@ def plot_losses(g_losses, d_losses):
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.legend()
-    plt.savefig("loss.png")
+    plt.savefig("wgan_gp_loss.png")
     plt.close()
 
 def train_model(train_loader, generator, discriminator, optimizer_generator, optimizer_discriminator, num_epochs, latent_dim, lambda_gp, n_discriminator, Tensor, batch_size = 32, saving_interval = 50):
@@ -208,5 +208,5 @@ def train_model(train_loader, generator, discriminator, optimizer_generator, opt
             fig.savefig("wan_gp_real_%d.png" % epoch)
             plt.close()
                     
-                    
+    plot_losses(g_losses, d_losses)              
     return generator, discriminator

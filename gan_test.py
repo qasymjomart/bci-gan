@@ -91,7 +91,7 @@ def gan_test(real_data, generated_data, classifier):
         cnn.to(device)
             
         criterion = nn.CrossEntropyLoss()
-        cnn_optimizer = torch.optim.Adam(cnn.parameters(), lr=0.001)
+        cnn_optimizer = torch.optim.Adam(cnn.parameters(), lr=0.0001)
         
         for epoch in range(50):  # loop over the dataset multiple times
 
@@ -116,7 +116,7 @@ def gan_test(real_data, generated_data, classifier):
                 # print statistics
                 running_loss += loss.item()
             print('Epoch %d, loss: %.3f' %
-                          (epoch + 1, running_loss / 180))
+                          (epoch + 1, running_loss / len(train_loader)))
             running_loss = 0.0
         
         print('Finished Training')

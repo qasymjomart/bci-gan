@@ -26,27 +26,34 @@ class Generator(nn.Module):
         self.image_shape= image_shape
 
         self.linear = nn.Sequential(
-            nn.Linear(self.latent_dim, 32*4*19)
+            nn.Linear(self.latent_dim, 32*8*38)
         )
         
         self.conv_layers = nn.Sequential(
+            
+            # nn.BatchNorm2d(32),
+            # nn.ConvTranspose2d(32, 32, kernel_size=2, stride=2),
+            # nn.BatchNorm2d(32),
+            # nn.ReLU(),
+            
+            # nn.ConvTranspose2d(32, 32, kernel_size=2, stride=2),
+            # nn.BatchNorm2d(32),
+            # nn.ReLU(),
+            
             nn.BatchNorm2d(32),
-            nn.Upsample(scale_factor=4),
+            nn.Upsample(scale_factor=2),
+            nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.BatchNorm2d(32),
-            # nn.LeakyReLU(0.2, inplace=True),
             nn.Conv2d(32, 16, 3, stride=1, padding=1),
-            nn.ReLU(),
             nn.BatchNorm2d(16, 0.8),
-            nn.Dropout(0.5),
-            # nn.LeakyReLU(0.2, inplace=True),
+            nn.ReLU(),
             nn.Conv2d(16, self.image_shape[0], 3, stride=1, padding=1),
             nn.Tanh()
         )
 
     def forward(self, z):
         x = self.linear(z)
-        x = x.view(x.shape[0], 32, 4, 19)
+        x = x.view(x.shape[0], 32, 8, 38)
         b = self.conv_layers(x)
         return b
 
@@ -67,8 +74,7 @@ class Discriminator(nn.Module):
         self.model = nn.Sequential(
             *discriminator_block(self.image_shape[0], 32, bn=True),
             *discriminator_block(32, 16, bn=True),
-            *discriminator_block(16, 16, bn=True),
-            nn.Dropout(0.25)
+            *discriminator_block(16, 16, bn=True)
             # nn.Sigmoid()
         )
 
@@ -99,7 +105,7 @@ def plot_losses(g_losses, d_losses):
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.legend()
-    plt.savefig("loss.png")
+    plt.savefig("dcgan_loss.png")
     plt.close()
     
 
