@@ -26,34 +26,34 @@ class Generator(nn.Module):
         self.image_shape= image_shape
 
         self.linear = nn.Sequential(
-            nn.Linear(self.latent_dim, 32*8*38)
+            nn.Linear(self.latent_dim, 128*4*19)
         )
         
         self.conv_layers = nn.Sequential(
             
-            # nn.BatchNorm2d(32),
-            # nn.ConvTranspose2d(32, 32, kernel_size=2, stride=2),
-            # nn.BatchNorm2d(32),
-            # nn.ReLU(),
+            nn.BatchNorm2d(128),
+            nn.ConvTranspose2d(128, 128, kernel_size=2, stride=2),
+            nn.BatchNorm2d(128),
+            nn.ReLU(True),
             
-            # nn.ConvTranspose2d(32, 32, kernel_size=2, stride=2),
-            # nn.BatchNorm2d(32),
-            # nn.ReLU(),
+            nn.ConvTranspose2d(128, 128, kernel_size=2, stride=2),
+            nn.BatchNorm2d(128),
+            nn.ReLU(True),
             
-            nn.BatchNorm2d(32),
-            nn.Upsample(scale_factor=2),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.Conv2d(32, 16, 3, stride=1, padding=1),
-            nn.BatchNorm2d(16, 0.8),
-            nn.ReLU(),
-            nn.Conv2d(16, self.image_shape[0], 3, stride=1, padding=1),
+            # nn.BatchNorm2d(128),
+            # nn.Upsample(scale_factor=2),
+            # nn.BatchNorm2d(128),
+            # nn.ReLU(),
+            # nn.Conv2d(128, 128, 3, stride=1, padding=1),
+            # nn.BatchNorm2d(128, 0.8),
+            # nn.ReLU(),
+            nn.Conv2d(128, self.image_shape[0], 3, stride=1, padding=1),
             nn.Tanh()
         )
 
     def forward(self, z):
         x = self.linear(z)
-        x = x.view(x.shape[0], 32, 8, 38)
+        x = x.view(x.shape[0], 128, 4, 19)
         b = self.conv_layers(x)
         return b
 
@@ -72,14 +72,14 @@ class Discriminator(nn.Module):
             return block
 
         self.model = nn.Sequential(
-            *discriminator_block(self.image_shape[0], 32, bn=True),
-            *discriminator_block(32, 16, bn=True),
-            *discriminator_block(16, 16, bn=True)
+            *discriminator_block(self.image_shape[0], 128, bn=False),
+            *discriminator_block(128, 128, bn=False),
+            *discriminator_block(128, 128, bn=False)
             # nn.Sigmoid()
         )
 
         self.fc = nn.Sequential(
-                nn.Linear(16*2*10, 1),
+                nn.Linear(128*2*10, 1),
                 nn.Sigmoid()
             )
         
@@ -114,7 +114,7 @@ def train_model(train_loader, generator, discriminator, optimizer_generator, opt
     d_losses = []
     device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
     real_label = 1.0
-    fake_label = -1.0
+    fake_label = 0.0
     for epoch in range(num_epochs):
         for i, (edata, _) in enumerate(train_loader):
             

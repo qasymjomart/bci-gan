@@ -40,14 +40,14 @@ elif gan_type == 'dcgan':
     from dcgan import Generator, Discriminator, train_model, weights_init_normal
 batch_size = 32
 lr = 0.0001
-num_epochs= 300
+num_epochs= 50
 lambda_gp = 10
 n_discriminator = 5
-saving_interval = 50
+saving_interval = num_epochs/10
 accuracies = []
+
 no_samples_to_train_gan= 144
-no_samples_subject_specific_test = 144
-no_samples_to_generate = 432
+no_samples_to_generate = 144
 #%% 
 
 sub_idxs = [0,1,2,3,4,5,6,7,8,9]
@@ -109,8 +109,8 @@ for sub in sub_idxs:
                 generator.cuda()
                 discriminator.cuda()
             
-            optimizer_generator = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0.5, 0.999))
-            optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
+            optimizer_generator = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0, 0.9))
+            optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0, 0.9))
             
             Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
             
@@ -134,8 +134,14 @@ for sub in sub_idxs:
             
         del y_train, generator, discriminator, Tensor
     
-    x_train = np.concatenate((generated_data[0], generated_data[1]))
-    y_train = np.concatenate((np.zeros((no_samples_to_generate,)), np.ones((no_samples_to_generate,))))
+    x_train = np.concatenate((generated_data[0], 
+                              generated_data[1],
+                              np.expand_dims(data[sub]['xtrain'][data[sub]['ytrain'] == 0][:no_samples_to_train_gan, :, :76], axis=1),
+                              np.expand_dims(data[sub]['xtrain'][data[sub]['ytrain'] == 1][:no_samples_to_train_gan, :, :76], axis=1)))
+    y_train = np.concatenate((np.zeros((no_samples_to_generate,)), 
+                              np.ones((no_samples_to_generate,)),
+                              np.zeros((no_samples_to_train_gan,)), 
+                              np.ones((no_samples_to_train_gan,))))
     # =============================================================================
     #     Data augmentation and testing
     # =============================================================================
@@ -154,10 +160,11 @@ for sub in sub_idxs:
     test_dataloader = DataLoader(test_tensor, batch_size = batch_size, shuffle = False)
     
     model = CNN(image_shape)
-    accuracy = train_cnn_model(model, train_dataloader, test_dataloader, epochs=50)
+    accuracy = train_cnn_model(model, train_dataloader, test_dataloader, epochs=100)
     print("Accuracy: " + str(accuracy) + " sub: " + str(sub))
     accuracies.append(accuracy)
     del model, x_train, x_test, y_train, y_test, train_dataloader, train_tensor, test_dataloader, test_tensor
+    torch.cuda.empty_cache()
 
 del data    
 with open(gan_type+'-subject-specific-results.txt', 'w') as f:

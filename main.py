@@ -9,21 +9,17 @@ Credits are given to https://github.com/eriklindernoren/PyTorch-GAN/blob/master/
 
 """
 
-# import os
 import numpy as np
-# import matplotlib.pyplot as plt
 
-# from torchvision.utils import save_image
 from torch.utils.data import DataLoader, TensorDataset
 from torch.autograd import Variable
 
-# import torch.nn as nn
-# import torch.nn.functional as F
-# import torch.autograd as autograd
 import torch
 torch.cuda.empty_cache()
 
 from data_import import Data_loader
+from gan_test import gan_test, t_sne
+
 
 cuda = True if torch.cuda.is_available() else False
 # if cuda has runtime error, then run "nvidia-modprobe -u" in terminal (first download nvidia-modprobe in ubuntu)
@@ -47,20 +43,21 @@ elif gan_type == 'dcgan':
     from dcgan import Generator, Discriminator, train_model, weights_init_normal
 
 batch_size = 32
-lr = 0.00005
-num_epochs= 50
+lr = 0.0001
+num_epochs= 500
 lambda_gp = 10
 n_discriminator = 5
-saving_interval = 5
+saving_interval = num_epochs/10
 
 #%%
 
-def gan_train_generate(no_samples_to_generate = 1152,
-                       gan_type = 'dcgan', 
-                       signal_type_to_generate = 'Target'):
+subs = [0,1,2,3,4,5,6,7,8,9]
+real_data, generated_data = {}, {}
+
+for target in ['Target', 'NonTarget']:
     
     data_load = Data_loader(dataset_name = 'TenHealthyData')
-    x_train = data_load.pool_one_class(signal_type_to_generate, normalize=True)
+    x_train = data_load.pool_one_class(target, normalize=True)
     
     # Moving data to torch
     # x_train = np.expand_dims(x_train, axis=1)[:, :, :76, :]        
@@ -68,7 +65,6 @@ def gan_train_generate(no_samples_to_generate = 1152,
     y_train = torch.ones((x_train.shape[0],1))
     
     train_dat = TensorDataset(x_train, y_train.type(dtype = torch.long))
-    
     train_loader = DataLoader(train_dat, batch_size = batch_size, shuffle = True)
         
     # =============================================================================
@@ -126,6 +122,7 @@ def gan_train_generate(no_samples_to_generate = 1152,
     # =============================================================================
     #     Generate samples from trained model
     # =====================================================zero_grad========================
+    no_samples_to_generate = len(x_train)
     generated_erp = np.empty((no_samples_to_generate, image_shape[0], image_shape[1], image_shape[2]))
     del train_loader, train_dat
     
@@ -135,26 +132,23 @@ def gan_train_generate(no_samples_to_generate = 1152,
         
     del y_train, generator, discriminator, Tensor
     
-    return np.squeeze(x_train.cpu().data.numpy(), axis=1) , np.squeeze(generated_erp, axis=1)
+    real_data[target] = np.squeeze(x_train.cpu().data.numpy(), axis=1)
+    generated_data[target] = np.squeeze(generated_erp, axis=1)
+    del x_train, generated_erp
+    torch.cuda.empty_cache()
 
 
 #%% Let's do some quality tests
 
-subs = [0,1,2,3,4,5,6,7,8,9]
-no_samples_to_generate = 1140
-target_real, target_generated = gan_train_generate(subs, 1440, gan_type, 'Target')
-nontarget_real, nontarget_generated = gan_train_generate(subs, 1440, gan_type, 'NonTarget')
-
 # =============================================================================
 # GAN-test (accuracy test: train on generated samples, test on real samples)
 # =============================================================================
-from gan_test import gan_test
 
-real_combined = {'x': np.concatenate((target_real, nontarget_real)), 
-                     'y': np.concatenate((np.ones(target_real.shape[0],), np.zeros(nontarget_real.shape[0],)))}
+real_combined = {'x': np.concatenate((real_data['Target'], real_data['NonTarget'])), 
+                     'y': np.concatenate((np.ones(real_data['Target'].shape[0],), np.zeros(real_data['NonTarget'].shape[0],)))}
 
-generated_combined = {'x': np.concatenate((target_generated, nontarget_generated)), 
-                     'y': np.concatenate((np.ones(target_generated.shape[0],), np.zeros(nontarget_generated.shape[0],)))}
+generated_combined = {'x': np.concatenate((generated_data['Target'], generated_data['NonTarget'])), 
+                     'y': np.concatenate((np.ones(generated_data['Target'].shape[0],), np.zeros(generated_data['NonTarget'].shape[0],)))}
 
 accuracy_LDA = gan_test(real_combined, generated_combined, 'LDA')
 accuracy_LR = gan_test(real_combined, generated_combined, 'LogisticRegression')
@@ -171,7 +165,6 @@ with open('gan_test_results.txt', 'w') as f:
 
 
 # Visualization t-SNE test
-from gan_test import t_sne, t_sne_one_data
 
 sns_plot = t_sne(real_combined, generated_combined)
 

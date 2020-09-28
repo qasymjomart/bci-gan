@@ -50,9 +50,9 @@ class Data_loader():
 
 		for ii in range(len(ss1)):
 			if ii == 0:
-				data = np.array(data[ii]['xtrain'][data[ii]['ytrain'] == classtype][:288])
+				data = np.array(ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == classtype][:288])
 			else:
-				data = np.concatenate((data, data[ii]['xtrain'][data[ii]['ytrain'] == classtype][:288]))
+				data = np.concatenate((data, ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == classtype][:288]))
 		
 		if normalize:
 			data = MinMaxNormalization(data)
@@ -114,7 +114,7 @@ class Data_loader():
 	
 		ss1 = []
 		for ii in range(len(d1)):
-			ss1.append(subject_specific([ii], d1))
+			ss1.append(subject_specific([ii], d1, augment=False))
 			
 		data = []
 		for ii in range(len(ss1)):
@@ -123,7 +123,7 @@ class Data_loader():
 			if normalize == True:
 				X = MinMaxNormalization(X) 
 # 			Y = ss1[ii][0]['ytrain']
-			Y = np.concatenate((np.ones((288,)), np.zeros((288,))))
+			Y = np.concatenate((np.ones((288)), np.zeros((288,))))
 			data.append(dict(xtrain=X, ytrain=Y))
 			
 		return data
