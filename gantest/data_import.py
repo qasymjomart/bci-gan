@@ -123,8 +123,7 @@ class Data_loader():
 # 			X = ss1[ii][0]['xtrain'][:288]
 			X = np.concatenate((ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 1], ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 0][:288])) 
 			if normalize == True:
-				scaler = NDStandardScaler()
-				X = scaler.fit_transform(X)
+				X = MinMaxNormalization(X) 
 # 			Y = ss1[ii][0]['ytrain']
 			Y = np.concatenate((np.ones((288)), np.zeros((288,))))
 			data.append(dict(xtrain=X, ytrain=Y))
@@ -169,10 +168,10 @@ class Data_loader():
 					Y = np.concatenate((np.ones((288,)), np.zeros((288,))))
 					
 		if normalize:
-			scaler = NDStandardScaler()
-			X = scaler.fit_transform(X)
-			x_test = scaler.transform(x_test)
-
+			Xmax, Xmin = np.max(X), np.min(X)
+			x_test = (x_test - Xmin) / (Xmax - Xmin)
+			X = MinMaxNormalization(X)
+		
 		test_data = dict(xtest = x_test, ytest = y_test)
 		data = dict(xtrain=X, ytrain=Y)
 		
@@ -218,7 +217,14 @@ def subject_specific(subjectIndex, d1, augment=False):
 	return data
 
 def MinMaxNormalization(data):
-	return (data - np.min(data))/(np.max(data) - np.min(data))
+	return (data - np.min(data))/(np.max(data) - np.min(data))    
+# 	data = []
+# 	for ii in range(len(ss1)):
+# 		X = ss1[ii][0]['xtrain']
+# 		Y = ss1[ii][0]['ytrain']
+# 		X = (X - np.min(X))/(np.max(X) - np.min(X))
+# 		data.append(dict(xtrain=X, ytrain=Y))
+		
 
 class NDStandardScaler(TransformerMixin):
 	def __init__(self, **kwargs):

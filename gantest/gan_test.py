@@ -175,9 +175,9 @@ def t_sne(real_data, generated_data):
 
     Parameters
     ----------
-    real_data : DICT
+    real_data : TYPE
         Real EEG data given as DICT ['x','y'].
-    generated_data : DICT
+    generated_data : TYPE
         Generated EEG data given as DICT ['x','y'].
 
     Returns

@@ -36,7 +36,7 @@ depth = 1
 image_shape = (depth, height, width)
 
 # Training parameters
-gan_type = 'wgan_gp'
+gan_type = 'dcgan'
 if gan_type == 'wgan_gp':
     from wgan_gp import Generator, Discriminator, train_model
 elif gan_type == 'dcgan':
@@ -44,7 +44,7 @@ elif gan_type == 'dcgan':
 
 batch_size = 32
 lr = 0.0001
-num_epochs= 100
+num_epochs= 50
 lambda_gp = 10
 n_discriminator = 5
 saving_interval = num_epochs/10

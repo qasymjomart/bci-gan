@@ -15,7 +15,6 @@ from torch.utils.data import DataLoader, TensorDataset
 from torch.autograd import Variable
 import torch
 torch.cuda.empty_cache()
-from gan_test import t_sne
 
 from data_import import Data_loader
 from cnn import CNN, train_cnn_model
@@ -34,14 +33,14 @@ depth = 1
 image_shape = (depth, height, width)
 
 # GAN Training parameters
-gan_type = 'dcgan'
+gan_type = 'wgan_gp'
 if gan_type == 'wgan_gp':
     from wgan_gp import Generator, Discriminator, train_model
 elif gan_type == 'dcgan':
     from dcgan import Generator, Discriminator, train_model, weights_init_normal
 batch_size = 32
 lr = 0.0001
-num_epochs= 30
+num_epochs= 500
 lambda_gp = 10
 n_discriminator = 5
 saving_interval = num_epochs/10
@@ -51,7 +50,7 @@ no_samples_to_train_gan= 144
 no_samples_to_generate = 144
 #%% 
 
-sub_idxs = [0]
+sub_idxs = [0,1,2,3,4,5,6,7,8,9]
 
 data_load = Data_loader(dataset_name = 'TenHealthyData')
 data = data_load.subject_specific(normalize = True)
@@ -134,13 +133,6 @@ for sub in sub_idxs:
             generated_data[target][batch_size*ii:batch_size*ii+batch_size, :, :, :] = generator(z).cpu().data.numpy()
             
         del y_train, generator, discriminator, Tensor
-        
-    # sns_plot = t_sne({'x': np.concatenate((np.squeeze(generated_data[0], axis=1), np.squeeze(generated_data[1], axis=1))),
-                         # 'y': np.concatenate((np.zeros((no_samples_to_generate,)), np.ones((no_samples_to_generate,))))},
-                    # {'x': np.concatenate((data[sub]['xtrain'][data[sub]['ytrain'] == 0][:no_samples_to_train_gan, :, :76],
-                                              # data[sub]['xtrain'][data[sub]['ytrain'] == 1][:no_samples_to_train_gan, :, :76])),
-                         # 'y': np.concatenate((np.zeros((no_samples_to_generate,)), np.ones((no_samples_to_generate,))))}
-                    # )
     
     x_train = np.concatenate((generated_data[0], 
                               generated_data[1],

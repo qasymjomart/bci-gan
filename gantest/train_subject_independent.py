@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Sep 23 14:09:27 2020
+Created on Sun Sep 27 15:39:09 2020
 
 @author: Kassymzhomart Kunanbayev aka @qasymjomart
 
-AUGMENTATION: make Subject-specific augmentation and classification
+AUGMENTATION: make Subject-independent augmentation and classification
 
 """
 
@@ -15,7 +15,6 @@ from torch.utils.data import DataLoader, TensorDataset
 from torch.autograd import Variable
 import torch
 torch.cuda.empty_cache()
-from gan_test import t_sne
 
 from data_import import Data_loader
 from cnn import CNN, train_cnn_model
@@ -41,29 +40,27 @@ elif gan_type == 'dcgan':
     from dcgan import Generator, Discriminator, train_model, weights_init_normal
 batch_size = 32
 lr = 0.0001
-num_epochs= 30
+num_epochs= 500
 lambda_gp = 10
 n_discriminator = 5
 saving_interval = num_epochs/10
 accuracies = []
 
-no_samples_to_train_gan= 144
-no_samples_to_generate = 144
 #%% 
 
-sub_idxs = [0]
-
+sub_idxs = [0,1,2,3,4,5,6,7,8,9]
 data_load = Data_loader(dataset_name = 'TenHealthyData')
-data = data_load.subject_specific(normalize = True)
 
-#%%%
+#%%
 
 for sub in sub_idxs:
     
+    data, test_data = data_load.subject_independent(sub, normalize = True)
+    no_samples_to_generate = data['xtrain'].shape[0]//2
     generated_data = []
     for target in [0, 1]: # generate Target and Nontarget samples
         # Data preparation
-        gan_train_data = np.array(data[sub]['xtrain'][data[sub]['ytrain'] == target][:no_samples_to_train_gan])
+        gan_train_data = np.array(data['xtrain'][data['ytrain'] == target])
         
         # Moving data to torch
         gan_train_data = torch.unsqueeze(torch.from_numpy(gan_train_data), axis=1)[:,:,:,:image_shape[2]]
@@ -110,8 +107,8 @@ for sub in sub_idxs:
                 generator.cuda()
                 discriminator.cuda()
             
-            optimizer_generator = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0, 0.9))
-            optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0, 0.9))
+            optimizer_generator = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0, 0.999))
+            optimizer_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0, 0.999))
             
             Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
             
@@ -134,29 +131,20 @@ for sub in sub_idxs:
             generated_data[target][batch_size*ii:batch_size*ii+batch_size, :, :, :] = generator(z).cpu().data.numpy()
             
         del y_train, generator, discriminator, Tensor
-        
-    # sns_plot = t_sne({'x': np.concatenate((np.squeeze(generated_data[0], axis=1), np.squeeze(generated_data[1], axis=1))),
-                         # 'y': np.concatenate((np.zeros((no_samples_to_generate,)), np.ones((no_samples_to_generate,))))},
-                    # {'x': np.concatenate((data[sub]['xtrain'][data[sub]['ytrain'] == 0][:no_samples_to_train_gan, :, :76],
-                                              # data[sub]['xtrain'][data[sub]['ytrain'] == 1][:no_samples_to_train_gan, :, :76])),
-                         # 'y': np.concatenate((np.zeros((no_samples_to_generate,)), np.ones((no_samples_to_generate,))))}
-                    # )
     
     x_train = np.concatenate((generated_data[0], 
                               generated_data[1],
-                              np.expand_dims(data[sub]['xtrain'][data[sub]['ytrain'] == 0][:no_samples_to_train_gan, :, :76], axis=1),
-                              np.expand_dims(data[sub]['xtrain'][data[sub]['ytrain'] == 1][:no_samples_to_train_gan, :, :76], axis=1)))
+                              np.expand_dims(data['xtrain'][data['ytrain'] == 0], axis=1)[:,:,:,:76],
+                              np.expand_dims(data['xtrain'][data['ytrain'] == 1], axis=1)[:,:,:,:76]))
     y_train = np.concatenate((np.zeros((no_samples_to_generate,)), 
                               np.ones((no_samples_to_generate,)),
-                              np.zeros((no_samples_to_train_gan,)), 
-                              np.ones((no_samples_to_train_gan,))))
+                              np.zeros((data['xtrain'].shape[0]//2,)), 
+                              np.ones((data['xtrain'].shape[0]//2,))))
     # =============================================================================
     #     Data augmentation and testing
     # =============================================================================
-    x_test = np.concatenate((data[sub]['xtrain'][data[sub]['ytrain'] == 0][144:288,:,:image_shape[2]], 
-                             data[sub]['xtrain'][data[sub]['ytrain'] == 1][144:288,:,:image_shape[2]]))
-    x_test = np.expand_dims(x_test, axis=1)
-    y_test = np.concatenate((np.zeros((144,)), np.ones((144,))))
+    x_test = np.expand_dims(test_data['xtest'], axis=1)
+    y_test = test_data['ytest']
     
     
     x_train, y_train = torch.from_numpy(x_train), torch.from_numpy(y_train)
@@ -175,5 +163,24 @@ for sub in sub_idxs:
     torch.cuda.empty_cache()
 
 del data    
-with open(gan_type+'-subject-specific-results.txt', 'w') as f:
+with open(gan_type+'-subject-independent-results.txt', 'w') as f:
     f.write(str(accuracies))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
