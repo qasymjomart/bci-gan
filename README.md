@@ -1,9 +1,7 @@
 # BCI-GAN project
 In this project, the application of GANs to augment EEG-ERP data is investigated.
 
-To train models, use files starting with 'train_'
-
-Example code to run in the terminal:
+To train models, use files starting with 'train_'. Example code to run in the terminal (select and hardcode parameters in the file first):
 
 <pre><code>python train_subject_specific.py
 </code></pre>
