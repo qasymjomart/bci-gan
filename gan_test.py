@@ -45,8 +45,8 @@ def gan_test(real_data, generated_data, classifier):
 
     """
     
-    x_train, y_train = shuffle(generated_data['x'], generated_data['y'])
-    x_test, y_test = shuffle(real_data['x'], real_data['y'])
+    x_train, y_train = shuffle(real_data['x'], real_data['y'])
+    x_test, y_test = shuffle(generated_data['x'], generated_data['y'])
     
     accuracy = 0
     
@@ -169,7 +169,7 @@ class DCNN(nn.Module):
     
 #%% t-SNE Visualisation
 
-def t_sne(real_data, generated_data):
+def t_sne(real_data, generated_data, gan_type):
     """
     Calculates t-SNE for data and plots its
 
@@ -214,7 +214,7 @@ def t_sne(real_data, generated_data):
     new_labels = ['NonTarget Gen', 'Target Gen', 'NonTarget Real', 'Target Real']
     for t, l in zip(sns_plot.legend().texts, new_labels): t.set_text(l)
     fig = sns_plot.get_figure()
-    fig.savefig('tSNE.png')
+    fig.savefig(gan_type+'_tSNE.png')
     return sns_plot
 
 def t_sne_one_data(real_data):

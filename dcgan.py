@@ -5,6 +5,9 @@ Created on Mon Sep 21 22:36:05 2020
 
 @author: Kassymzhomart Kunanbayev aka @qasymjomart
 
+Credits are given to https://github.com/eriklindernoren/PyTorch-GAN/blob/master/implementations/wgan_gp/wgan_gp.py
+that was valuable and helpful in implementing
+
 """
 import os
 import numpy as np

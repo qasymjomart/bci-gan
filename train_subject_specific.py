@@ -41,7 +41,7 @@ elif gan_type == 'dcgan':
     from dcgan import Generator, Discriminator, train_model, weights_init_normal
 batch_size = 32
 lr = 0.0001
-num_epochs= 30
+num_epochs= 100
 lambda_gp = 10
 n_discriminator = 5
 saving_interval = num_epochs/10

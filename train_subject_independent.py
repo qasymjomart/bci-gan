@@ -165,22 +165,3 @@ for sub in sub_idxs:
 del data    
 with open(gan_type+'-subject-independent-results.txt', 'w') as f:
     f.write(str(accuracies))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

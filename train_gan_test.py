@@ -5,8 +5,6 @@ Created on Sat Sep 19 14:49:34 2020
 
 @author: Kassymzhomart Kunanbayev aka @qasymjomart
 
-Credits are given to https://github.com/eriklindernoren/PyTorch-GAN/blob/master/implementations/wgan_gp/wgan_gp.py
-
 """
 
 import numpy as np
@@ -36,7 +34,7 @@ depth = 1
 image_shape = (depth, height, width)
 
 # Training parameters
-gan_type = 'wgan_gp'
+gan_type = 'dcgan'
 if gan_type == 'wgan_gp':
     from wgan_gp import Generator, Discriminator, train_model
 elif gan_type == 'dcgan':
@@ -156,7 +154,7 @@ accuracy_SVM = gan_test(real_combined, generated_combined, 'SVM')
 accuracy_CNN = gan_test(real_combined, generated_combined, 'DCNN')
 
 print(accuracy_LDA, accuracy_LR, accuracy_SVM, accuracy_CNN)
-with open('gan_test_results.txt', 'w') as f:
+with open(gan_type + '_gan_test_results.txt', 'w') as f:
     f.write('GAN type: ' + gan_type)
     f.write('accuracy on LDA: ' + str(accuracy_LDA))
     f.write('accuracy on LR: ' + str(accuracy_LR))
@@ -166,7 +164,7 @@ with open('gan_test_results.txt', 'w') as f:
 
 # Visualization t-SNE test
 
-sns_plot = t_sne(real_combined, generated_combined)
+sns_plot = t_sne(real_combined, generated_combined, gan_type)
 
 # sns_plot = t_sne_one_data(real_combined)
 # sns_plot = t_sne_one_data(generated_combined)
