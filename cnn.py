@@ -8,6 +8,7 @@ Created on Fri Sep 25 16:36:41 2020
 
 import torch.nn as nn
 import torch
+torch.manual_seed(0)
 
 class CNN(nn.Module):
     def __init__(self, input_shape):
@@ -75,6 +76,7 @@ def train_cnn_model(model, train_loader, test_loader, epochs):
     print('Finished Training')
     correct = 0
     total = 0
+    model.eval()
     with torch.no_grad():
         for data in test_loader:
             inputs, labels = data
@@ -83,6 +85,7 @@ def train_cnn_model(model, train_loader, test_loader, epochs):
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
-    
+
     accuracy = 100 * correct / total
+    model.train()
     return accuracy

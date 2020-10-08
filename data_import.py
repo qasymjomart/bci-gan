@@ -131,7 +131,7 @@ class Data_loader():
 			
 		return data
 	
-	def subject_independent(self, test_sub, normalize = True):
+	def subject_independent(self, test_sub, sample_size = 288, normalize = True):
 		'''
 			This function intakes a dataset with a certain name and imports in a subject-independent way.
 	
@@ -159,14 +159,27 @@ class Data_loader():
 			if ii == test_sub:
 				pass
 			else:
+				indx = np.arange(sample_size)
+				np.random.shuffle(indx)
+				indx0 = indx[:sample_size//2]
+				np.random.shuffle(indx)
+				indx1 = indx[:sample_size//2]
 				try:
-					temp_X = np.concatenate((ss1[ii][0]['xtrain'][ss1[test_sub][0]['ytrain'] == 1], ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 0][:288]))
-					temp_Y = np.concatenate((np.ones((288,)), np.zeros((288,))))
+					temp_X0 = ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 0][indx0]
+					temp_X1 = ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 1][indx1]
+					temp_X = np.concatenate((temp_X0, temp_X1))
+					temp_Y0 = ss1[ii][0]['ytrain'][ss1[ii][0]['ytrain'] == 0][indx0]
+					temp_Y1 = ss1[ii][0]['ytrain'][ss1[ii][0]['ytrain'] == 1][indx1]
+					temp_Y = np.concatenate((temp_Y0, temp_Y1))
 					X = np.concatenate((X, temp_X))
 					Y = np.concatenate((Y, temp_Y))
 				except:
-					X = np.concatenate((ss1[ii][0]['xtrain'][ss1[test_sub][0]['ytrain'] == 1], ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 0][:288]))
-					Y = np.concatenate((np.ones((288,)), np.zeros((288,))))
+					temp_X0 = ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 0][indx0]
+					temp_X1 = ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 1][indx1]
+					X = np.concatenate((temp_X0, temp_X1))
+					temp_Y0 = ss1[ii][0]['ytrain'][ss1[ii][0]['ytrain'] == 0][indx0]
+					temp_Y1 = ss1[ii][0]['ytrain'][ss1[ii][0]['ytrain'] == 1][indx1]
+					Y = np.concatenate((temp_Y0, temp_Y1))
 					
 		if normalize:
 			scaler = NDStandardScaler()

@@ -93,7 +93,7 @@ def gan_test(real_data, generated_data, classifier):
         criterion = nn.CrossEntropyLoss()
         cnn_optimizer = torch.optim.Adam(cnn.parameters(), lr=0.0001)
         
-        for epoch in range(50):  # loop over the dataset multiple times
+        for epoch in range(100):  # loop over the dataset multiple times
 
             running_loss = 0.0
             for i, data in enumerate(train_loader, 0):
