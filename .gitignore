@@ -1,4 +1,6 @@
 /__pycache__
+/test-2-1-augmentation
+/test-300-epochs
 *.pickle
 *.png
 *.txt

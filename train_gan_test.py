@@ -138,30 +138,30 @@ for target in ['Target', 'NonTarget']:
 		Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 		vae_model = train_model(train_loader, vae_model, 
 				vae_optimizer, vae_loss, 
-				num_epochs, latent_dim, Tensor, batch_size = 32, saving_interval = 50)
+				num_epochs, latent_dim, Tensor, batch_size, saving_interval)
 		
 	
 	# =============================================================================
 	#     Generate samples from trained model
 	# =====================================================zero_grad========================
-	if gan_type == 'vae':
-		no_samples_to_generate = len(train_loader)
-		generated_erp = np.empty((no_samples_to_generate, image_shape[0], image_shape[1], image_shape[2]))
-		for ii, (edata, _) in train_loader:
-			real_data = Variable(edata.type(Tensor))
-			generated_erp[batch_size*ii:batch_size*ii+batch_size, :, :, :] = vae_model(real_data).cpu().data.numpy()
-	else:
-		no_samples_to_generate = len(x_train)//2
-		generated_erp = np.empty((no_samples_to_generate, image_shape[0], image_shape[1], image_shape[2]))
-		for ii in range(no_samples_to_generate//batch_size):
-			z = Variable(Tensor(np.random.normal(0, 1, (batch_size, latent_dim))))
-			generated_erp[batch_size*ii:batch_size*ii+batch_size, :, :, :] = generator(z).cpu().data.numpy()
-		
-	del train_loader, train_dat
-			
-	del y_train, generator, discriminator, Tensor
+	no_samples_to_generate = len(train_loader.dataset)//2
+
+    if gan_type == 'vae':
+        generated_data.append(np.empty((no_samples_to_generate, image_shape[0], image_shape[1], image_shape[2])))
+        for ii, (edata, _) in enumerate(train_loader):
+            e_data = Variable(edata.type(Tensor))
+            recon, mu, logvar = vae_model(e_data)
+            generated_data[batch_size*ii:batch_size*ii+len(e_data), :, :, :] = recon.cpu().data.numpy()
+    else:
+        generated_data.append(np.empty((no_samples_to_generate, image_shape[0], image_shape[1], image_shape[2])))
+        for ii in range(0, no_samples_to_generate, batch_size):
+            z = Variable(Tensor(np.random.normal(0, 1, (min(batch_size, no_samples_to_generate-ii) , latent_dim))))
+            generated_data[target][ii:min(ii+batch_size, no_samples_to_generate), :, :, :] = generator(z).cpu().data.numpy()
+        del generator, discriminator
+
+	del train_loader, train_dat, y_train, Tensor
 	
-	real_data[target] = np.squeeze(x_train[len(x_train)//2 : len(x_train)].cpu().data.numpy(), axis=1)
+	real_data[target] = np.squeeze(x_train.cpu().data.numpy(), axis=1)
 	generated_data[target] = np.squeeze(generated_erp, axis=1)
 	del x_train, generated_erp
 	torch.cuda.empty_cache()
@@ -180,7 +180,7 @@ generated_combined = {'x': np.concatenate((generated_data['Target'], generated_d
 					 'y': np.concatenate((np.ones(generated_data['Target'].shape[0],), np.zeros(generated_data['NonTarget'].shape[0],)))}
 
 accuracy_LDA = gan_test(real_combined, generated_combined, 'LDA')
-accuracy_LR = gan_test(real_combined, generated_combined, 'LogisticRegression')
+accuracy_LR  = gan_test(real_combined, generated_combined, 'LogisticRegression')
 accuracy_SVM = gan_test(real_combined, generated_combined, 'SVM')
 accuracy_CNN = gan_test(real_combined, generated_combined, 'DCNN')
 

@@ -38,6 +38,9 @@ if gan_type == 'wgan_gp':
 	from wgan_gp import Generator, Discriminator, train_model
 elif gan_type == 'dcgan':
 	from dcgan import Generator, Discriminator, train_model, weights_init_normal
+elif gan_type == 'vae':
+	from vae import VAE, train_model
+
 batch_size = 32
 lr = 0.0001
 num_epochs= 100
@@ -52,7 +55,7 @@ sub_idxs = [0,1,2,3,4,5,6,7,8,9]
 data_load = Data_loader(dataset_name = 'TenHealthyData')
 
 #%%
-sample_sizes = [50, 100, 150, 200, 250, 288]
+sample_sizes = [20, 50, 100, 150, 200, 250, 288]
 
 for sample_size in sample_sizes:
 	accuracies[str(sample_size)] = []
@@ -122,17 +125,47 @@ for sample_size in sample_sizes:
 							optimizer_discriminator, num_epochs, latent_dim, lambda_gp, n_discriminator, 
 							Tensor, batch_size, saving_interval, plotting=False)
 			
-			# =================================================================data_load.subject_independent(0, normalize = True)============
-			#     Generate samples from trained model
-			# =====================================================zero_grad========================
-			generated_data.append(np.empty((no_samples_to_generate, image_shape[0], image_shape[1], image_shape[2])))
-			del train_loader, train_dat
-			
-			for ii in range(no_samples_to_generate//batch_size):
-				z = Variable(Tensor(np.random.normal(0, 1, (batch_size, latent_dim))))
-				generated_data[target][batch_size*ii:batch_size*ii+batch_size, :, :, :] = generator(z).cpu().data.numpy()
+			elif gan_type == 'vae':
+						
+				vae_model = VAE()
+				vae_loss = torch.nn.BCELoss()
 				
-			del y_train, generator, discriminator, Tensor
+				if cuda:
+					vae_model.cuda()
+					vae_loss.cuda()
+					
+				vae_optimizer = torch.optim.Adam(vae_model.parameters(), lr=lr)
+				
+				Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+
+				# =============================================================================
+				#     Model Training
+				# =============================================================================
+				
+				vae_model = train_model(train_loader, vae_model, 
+										vae_optimizer, vae_loss, num_epochs, latent_dim, Tensor, batch_size, saving_interval, plotting=False)
+
+			# =============================================================================
+			#     Generate samples from trained model
+			# =============================================================================
+
+			no_samples_to_generate = len(train_loader.dataset)
+			print(no_samples_to_generate)
+			if gan_type == 'vae':
+				generated_data.append(np.empty((no_samples_to_generate, image_shape[0], image_shape[1], image_shape[2])))
+				for ii, (edata, _) in enumerate(train_loader):
+					e_data = Variable(edata.type(Tensor))
+					recon, mu, logvar = vae_model(e_data)
+					generated_data[batch_size*ii:batch_size*ii+len(e_data), :, :, :] = recon.cpu().data.numpy()
+				del vae_model
+			else:
+				generated_data.append(np.empty((no_samples_to_generate, image_shape[0], image_shape[1], image_shape[2])))
+				for ii in range(0, no_samples_to_generate, batch_size):
+					z = Variable(Tensor(np.random.normal(0, 1, (min(batch_size, no_samples_to_generate-ii) , latent_dim))))
+					generated_data[target][ii:min(ii+batch_size, no_samples_to_generate), :, :, :] = generator(z).cpu().data.numpy()
+				del generator, discriminator
+
+			del train_loader, train_dat, y_train, Tensor
 		
 		x_train = np.concatenate((generated_data[0], 
 								  generated_data[1],
@@ -145,10 +178,11 @@ for sample_size in sample_sizes:
 		# =============================================================================
 		#     Data augmentation and testing
 		# =============================================================================
-		x_test = np.expand_dims(test_data['xtest'], axis=1)
+		x_test = np.expand_dims(test_data['xtest'], axis=1)[:,:,:,:76]
 		y_test = test_data['ytest']
-		
-		
+		print('Train data shape: ', x_train.shape, 'Test data shape: ', x_test.shape, 'Generated data shape: ', generated_data[0].shape[0]+generated_data[1].shape[0])
+    
+		# Convert to torch from numpy
 		x_train, y_train = torch.from_numpy(x_train), torch.from_numpy(y_train)
 		x_test, y_test = torch.from_numpy(x_test), torch.from_numpy(y_test)
 		
@@ -159,8 +193,10 @@ for sample_size in sample_sizes:
 		
 		model = CNN(image_shape)
 		accuracy = train_cnn_model(model, train_dataloader, test_dataloader, epochs=100)
+
 		print("Accuracy: " + str(accuracy) + " sub: " + str(sub))
 		accuracies[str(sample_size)].append(accuracy)
+
 		del model, x_train, x_test, y_train, y_test, train_dataloader, train_tensor, test_dataloader, test_tensor
 		torch.cuda.empty_cache()
 	

@@ -119,17 +119,35 @@ class Data_loader():
 			ss1.append(subject_specific([ii], d1, augment=False))
 			
 		data = []
+		test_data = []
 		for ii in range(len(ss1)):
-# 			X = ss1[ii][0]['xtrain'][:288]
+
 			X = np.concatenate((ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 1], ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 0][:288])) 
 			if normalize == True:
 				scaler = NDStandardScaler()
 				X = scaler.fit_transform(X)
 # 			Y = ss1[ii][0]['ytrain']
-			Y = np.concatenate((np.ones((288)), np.zeros((288,))))
-			data.append(dict(xtrain=X, ytrain=Y))
+			Y = np.concatenate((np.ones((288,)), np.zeros((288,))))
+
+			# indx = np.arange(288)
+			# # np.random.shuffle(indx)
+			# indx0 = indx[:144]
+
+			# x_train, y_train = X[indx0], Y[indx0]
+			# x_test, y_test = X[[i for i in np.arange(288) if i not in indx0]], Y[[i for i in np.arange(288) if i not in indx0]]
+
+			# # np.random.shuffle(indx)
+			# indx1 = indx[:144] + 288
+			# x_train, y_train = np.concatenate((x_train, X[indx1])), np.concatenate((y_train, Y[indx1]))
+			# x_test, y_test = np.concatenate((x_test, X[[i for i in np.arange(288, 576) if i not in indx1]])), np.concatenate((y_test, Y[[i for i in np.arange(288, 576) if i not in indx1]]))
+
+			x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size=0.5, shuffle=True, stratify=Y)
+
+			data.append(dict(xtrain=x_train, ytrain=y_train))
+			test_data.append(dict(xtest = x_test, ytest=y_test))
+			del x_train, y_train, x_test, y_test, X, Y
 			
-		return data
+		return data, test_data
 	
 	def subject_independent(self, test_sub, sample_size = 288, normalize = True):
 		'''
@@ -159,7 +177,7 @@ class Data_loader():
 			if ii == test_sub:
 				pass
 			else:
-				indx = np.arange(sample_size)
+				indx = np.arange(288)
 				np.random.shuffle(indx)
 				indx0 = indx[:sample_size//2]
 				np.random.shuffle(indx)

@@ -31,31 +31,34 @@ depth = 1
 image_shape = (depth, height, width)
 batch_size = 32
 lr = 0.0001
-num_epochs= 100
+num_epochs= 300
 accuracies = []
-train_type = 'subject-independent'
+train_type = 'subject-specific'
 
 if train_type == 'subject-specific':
 	no_samples= 144
 	sub_idxs = [0,1,2,3,4,5,6,7,8,9]
 	
 	data_load = Data_loader(dataset_name = 'TenHealthyData')
-	data = data_load.subject_specific(normalize = True)
+	data, test_data = data_load.subject_specific(normalize = True)
 	
 	for sub in sub_idxs:
 				
-		x_train = np.concatenate((np.expand_dims(data[sub]['xtrain'][data[sub]['ytrain'] == 0][:no_samples, :, :image_shape[2]], axis=1),
-								  np.expand_dims(data[sub]['xtrain'][data[sub]['ytrain'] == 1][:no_samples, :, :image_shape[2]], axis=1)))
-		y_train = np.concatenate((np.zeros((no_samples,)), 
-								  np.ones((no_samples,))))
+		x_train = np.expand_dims(data[sub]['xtrain'][:, :, :76], axis=1)
+		y_train = data[sub]['ytrain']
+
 		# =============================================================================
 		#     Data augmentation and testing
 		# =============================================================================
-		x_test = np.concatenate((data[sub]['xtrain'][data[sub]['ytrain'] == 0][144:288,:,:image_shape[2]], 
-								 data[sub]['xtrain'][data[sub]['ytrain'] == 1][144:288,:,:image_shape[2]]))
+		# x_test = np.concatenate((data[sub]['xtrain'][data[sub]['ytrain'] == 0][144:288,:,:image_shape[2]], 
+								 # data[sub]['xtrain'][data[sub]['ytrain'] == 1][144:288,:,:image_shape[2]]))
+		# x_test = np.expand_dims(x_test, axis=1)
+		# y_test = np.concatenate((np.zeros((144,)), np.ones((144,))))
+
+		x_test, y_test = test_data[sub]['xtest'][:,:,:76], test_data[sub]['ytest']
 		x_test = np.expand_dims(x_test, axis=1)
-		y_test = np.concatenate((np.zeros((144,)), np.ones((144,))))
-		
+    
+		print('Train data shape: ', x_train.shape, 'Test data shape: ', x_test.shape)
 		
 		x_train, y_train = torch.from_numpy(x_train), torch.from_numpy(y_train)
 		x_test, y_test = torch.from_numpy(x_test), torch.from_numpy(y_test)
@@ -66,7 +69,7 @@ if train_type == 'subject-specific':
 		test_dataloader = DataLoader(test_tensor, batch_size = batch_size, shuffle = False)
 		
 		model = CNN(image_shape)
-		accuracy = train_cnn_model(model, train_dataloader, test_dataloader, epochs=100)
+		accuracy = train_cnn_model(model, train_dataloader, test_dataloader, epochs=num_epochs)
 		print("Accuracy: " + str(accuracy) + " sub: " + str(sub))
 		accuracies.append(accuracy)
 		del model, x_train, x_test, y_train, y_test, train_dataloader, train_tensor, test_dataloader, test_tensor
@@ -95,7 +98,7 @@ elif train_type == 'subject-independent':
 			# =============================================================================
 			#     Data augmentation and testing
 			# =============================================================================
-			x_test = np.expand_dims(test_data['xtest'], axis=1)
+			x_test = np.expand_dims(test_data['xtest'], axis=1)[:,:,:,:76]
 			y_test = test_data['ytest']
 			
 			
@@ -108,7 +111,7 @@ elif train_type == 'subject-independent':
 			test_dataloader = DataLoader(test_tensor, batch_size = batch_size, shuffle = False)
 			
 			model = CNN(image_shape)
-			accuracy = train_cnn_model(model, train_dataloader, test_dataloader, epochs=100)
+			accuracy = train_cnn_model(model, train_dataloader, test_dataloader, epochs=num_epochs)
 			print("Accuracy: " + str(accuracy) + " sub: " + str(sub))
 			accuracies[str(sample_size)].append(accuracy)
 			del model, x_train, x_test, y_train, y_test, train_dataloader, train_tensor, test_dataloader, test_tensor
