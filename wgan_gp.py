@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader, TensorDataset
 from torch.autograd import Variable
+from torchvision import transforms
 
 import torch.nn as nn
 import torch.autograd as autograd
@@ -47,7 +48,7 @@ class Generator(nn.Module):
 			nn.LeakyReLU(0.2, inplace=True),
 
 			nn.Conv2d(32, self.image_shape[0], 3, stride=1, padding=1),
-			nn.Tanh()
+			nn.Sigmoid()
 		)
 
 	def forward(self, z):
@@ -126,10 +127,9 @@ def train_model(train_loader, generator, discriminator,
 				num_epochs, latent_dim, lambda_gp, n_discriminator, Tensor, batch_size = 32, saving_interval = 50, plotting=True):
 	g_losses = []
 	d_losses = []
-	
+	# normalize=transforms.Normalize(mean = [0.5], std=[0.5])
 	for epoch in range(num_epochs):
 		for i, (edata, _) in enumerate(train_loader):
-	
 			# Configure input
 			real_images = Variable(edata.type(Tensor))
 	

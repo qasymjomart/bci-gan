@@ -37,11 +37,11 @@ class Generator(nn.Module):
 			nn.BatchNorm2d(32),
 			nn.ConvTranspose2d(32, 32, kernel_size=2, stride=2),
 			nn.BatchNorm2d(32),
-			nn.ReLU(True),
+			nn.ReLU(),
 			
 			nn.ConvTranspose2d(32, 32, kernel_size=2, stride=2),
 			nn.BatchNorm2d(32),
-			nn.ReLU(True),
+			nn.ReLU(),
 			
 			# nn.BatchNorm2d(128),
 			# nn.Upsample(scale_factor=2),
@@ -51,7 +51,7 @@ class Generator(nn.Module):
 			# nn.BatchNorm2d(128, 0.8),
 			# nn.ReLU(),
 			nn.Conv2d(32, self.image_shape[0], 3, stride=1, padding=1),
-			nn.Tanh()
+			nn.Sigmoid()
 		)
 
 	def forward(self, z):

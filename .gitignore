@@ -1,6 +1,8 @@
 /__pycache__
 /test-2-1-augmentation
 /test-300-epochs
+/512channels
+/ss
 *.pickle
 *.png
 *.txt

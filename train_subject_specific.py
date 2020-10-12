@@ -34,7 +34,7 @@ depth = 1
 image_shape = (depth, height, width)
 
 # GAN Training parameters
-gan_type = 'vae'
+gan_type = 'dcgan'
 if gan_type == 'wgan_gp':
     from wgan_gp import Generator, Discriminator, train_model
 elif gan_type == 'dcgan':
@@ -43,7 +43,7 @@ elif gan_type == 'vae':
     from vae import VAE, train_model
 batch_size = 32
 lr = 0.0001
-num_epochs= 1000
+num_epochs= 500
 lambda_gp = 10
 n_discriminator = 5
 saving_interval = num_epochs/10
@@ -150,7 +150,7 @@ for sub in sub_idxs:
         # =================================================================data_load.subject_independent(0, normalize = True)============
         #     Generate samples from trained model
         # =====================================================zero_grad========================
-        no_samples_to_generate = 2*len(train_loader.dataset)
+        no_samples_to_generate = len(train_loader.dataset)
         
         if gan_type == 'vae':
             generated_data.append(np.empty((no_samples_to_generate, image_shape[0], image_shape[1], image_shape[2])))
