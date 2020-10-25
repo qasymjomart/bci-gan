@@ -27,9 +27,9 @@ class VAE(nn.Module):
 		
 		self.encoder = nn.Sequential(
 			
-			*discriminator_block(self.image_shape[0], 32, bn=True),
-			*discriminator_block(32, 32, bn=True),
-			*discriminator_block(32, 32, bn=True)
+			*discriminator_block(self.image_shape[0], 32, bn=False),
+			*discriminator_block(32, 32, bn=False),
+			*discriminator_block(32, 32, bn=False)
 			)
 		
 		self.fc1 = nn.Linear(32*2*10, self.latent_dim)
@@ -116,7 +116,7 @@ def train_model(train_loader, model,
 			recon_data, mu, logvar = model(real_data)
 	
 			# loss = vae_loss(recon_data, real_data) - 0.5*torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
-			loss = vae_loss(recon_data, real_data) + 4.5*torch.mean(-0.5 * torch.sum(1 + logvar - mu ** 2 - logvar.exp(), dim = 1), dim = 0)
+			loss = vae_loss(recon_data, real_data) + (288/32)*torch.mean(-0.5 * torch.sum(1 + logvar - mu ** 2 - logvar.exp(), dim = 1), dim = 0)
 			
 			loss.backward()
 			

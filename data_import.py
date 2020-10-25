@@ -16,9 +16,11 @@ import numpy as np
 # import pandas as pd 
 
 # sklearn standard scaler  
+import torch
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.base import TransformerMixin
 from sklearn.model_selection import train_test_split
+from torch.utils.data import Dataset
 
 
 class Data_loader():
@@ -45,14 +47,14 @@ class Data_loader():
 		for ii in range(len(d1)):
 			ss1.append(subject_specific([ii], d1))
 		
-		classtype = 1 if classtype == 'Target' else 0
+		classtype = 1 if classtype == 1 else 0
 		data = []
 
 		for ii in range(len(ss1)):
 			if ii == 0:
-				data = np.array(ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == classtype][:288])
+				data = np.array(ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == classtype][:288, :, :76])
 			else:
-				data = np.concatenate((data, ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == classtype][:288]))
+				data = np.concatenate((data, ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == classtype][:288, :, :76]))
 		
 		if normalize:
 # 			data = MinMaxNormalization(data)
@@ -83,11 +85,11 @@ class Data_loader():
 		
 		for ii in range(len(ss1)):
 			if ii==0:
-				X = ss1[ii][0]['xtrain']
-				Y = ss1[ii][0]['ytrain']
+				X = ss1[ii][0]['xtrain'][:, :, :76]
+				Y = ss1[ii][0]['ytrain'][:, :, :76]
 			else:
-				X = np.concatenate((X, ss1[ii][0]['xtrain']))
-				Y = np.concatenate((Y, ss1[ii][0]['ytrain']))
+				X = np.concatenate((X, ss1[ii][0]['xtrain'][:, :, :76]))
+				Y = np.concatenate((Y, ss1[ii][0]['ytrain'][:, :, :76]))
 		
 		if normalize:
 			X = MinMaxNormalization(X)
@@ -122,7 +124,7 @@ class Data_loader():
 		test_data = []
 		for ii in range(len(ss1)):
 
-			X = np.concatenate((ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 1], ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 0][:288])) 
+			X = np.concatenate((ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 1][:,:,:76], ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 0][:288, :, :76])) 
 			if normalize == True:
 				scaler = NDStandardScaler()
 				X = scaler.fit_transform(X)
@@ -171,7 +173,7 @@ class Data_loader():
 			
 		data = []
 		X, Y = None, None
-		x_test = np.concatenate((ss1[test_sub][0]['xtrain'][ss1[test_sub][0]['ytrain'] == 1], ss1[test_sub][0]['xtrain'][ss1[test_sub][0]['ytrain'] == 0][:288])) 
+		x_test = np.concatenate((ss1[test_sub][0]['xtrain'][ss1[test_sub][0]['ytrain'] == 1][:,:,:76], ss1[test_sub][0]['xtrain'][ss1[test_sub][0]['ytrain'] == 0][:288,:,:76])) 
 		y_test = np.concatenate((np.ones((288,)), np.zeros((288,))))
 		for ii in range(len(ss1)):
 			if ii == test_sub:
@@ -183,8 +185,8 @@ class Data_loader():
 				np.random.shuffle(indx)
 				indx1 = indx[:sample_size//2]
 				try:
-					temp_X0 = ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 0][indx0]
-					temp_X1 = ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 1][indx1]
+					temp_X0 = ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 0][indx0, :, :76]
+					temp_X1 = ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 1][indx1, :, :76]
 					temp_X = np.concatenate((temp_X0, temp_X1))
 					temp_Y0 = ss1[ii][0]['ytrain'][ss1[ii][0]['ytrain'] == 0][indx0]
 					temp_Y1 = ss1[ii][0]['ytrain'][ss1[ii][0]['ytrain'] == 1][indx1]
@@ -192,8 +194,8 @@ class Data_loader():
 					X = np.concatenate((X, temp_X))
 					Y = np.concatenate((Y, temp_Y))
 				except:
-					temp_X0 = ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 0][indx0]
-					temp_X1 = ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 1][indx1]
+					temp_X0 = ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 0][indx0, :, :76]
+					temp_X1 = ss1[ii][0]['xtrain'][ss1[ii][0]['ytrain'] == 1][indx1, :, :76]
 					X = np.concatenate((temp_X0, temp_X1))
 					temp_Y0 = ss1[ii][0]['ytrain'][ss1[ii][0]['ytrain'] == 0][indx0]
 					temp_Y1 = ss1[ii][0]['ytrain'][ss1[ii][0]['ytrain'] == 1][indx1]
@@ -284,4 +286,94 @@ class NDStandardScaler(TransformerMixin):
 		# Reshape X back to it's original shape
 		if len(X.shape) >= 2:
 			X = X.reshape(-1, *self._orig_shape)
-		return X 
+		return X
+
+class CustomEEGDataset(Dataset):
+	"""EEG train Custom dataset."""
+
+	def __init__(self, data, labels, transform=None):
+		"""
+		Args:
+			csv_file (string): Path to the csv file with annotations.
+			root_dir (string): Directory with all the images.
+			transform (callable, optional): Optional transform to be applied
+				on a sample.
+		"""
+		self.data = {'xtrain': data, 'ytrain': labels}
+        
+		self.transform = transform
+
+	def __len__(self):
+		return len(self.data['xtrain'])
+
+	def __getitem__(self, idx):
+		try:
+			sample = self.data['xtrain'][idx]
+			label = self.data['ytrain'][idx]
+			if self.transform:
+				sample = self.transform(sample)
+			return sample, label
+		except:
+			print("EEG Data is not imported yet. Please first import subjects using import_subjects method.")
+
+class CustomEEGDataset_OnlyData(Dataset):
+	"""EEG train Custom dataset."""
+
+	def __init__(self, data, transform=None):
+		"""
+		Args:
+			csv_file (string): Path to the csv file with annotations.
+			root_dir (string): Directory with all the images.
+			transform (callable, optional): Optional transform to be applied
+				on a sample.
+		"""
+		self.data = {'xtrain': data}
+        
+		self.transform = transform
+
+	def __len__(self):
+		return len(self.data['xtrain'])
+
+	def __getitem__(self, idx):
+		try:
+			sample = self.data['xtrain'][idx]
+
+			if self.transform:
+				sample = self.transform(sample)
+
+			return sample
+		except:
+			print("EEG Data is not imported yet. Please first import subjects using import_subjects method.")
+
+class Reshape(object):
+    """Rescale the image in a sample to a given size using duplicating
+
+    Args:
+        output_size (tuple or int):
+    """
+
+    def __init__(self, output_size):
+        assert isinstance(output_size, (int, tuple))
+        self.output_size = output_size
+
+    def __call__(self, sample):
+
+        h, w = sample.shape[:2]
+        if isinstance(self.output_size, int):
+            new_h, new_w = int(self.output_size), int(self.output_size)
+
+
+        img = self.pad_by_duplicating(sample, new_h, new_w)
+
+        # h and w are swapped for landmarks because for images,
+        # x and y axes are axis 1 and 0 respectively
+        img = img[None, :, :] * np.ones(3, dtype=int)[:, None, None]
+        return torch.from_numpy(img).double()
+    
+    def pad_by_duplicating(self, x, desired_height=224, desired_width=224): #duplicate signal until the desired new array is full
+        x_height, x_width = x.shape[0], x.shape[1]
+        new_x = np.zeros((desired_height, desired_width))
+        for nhx in range(0, desired_height, x_height):
+            for nwx in range(0, desired_width, x_width):
+                new_x[nhx:min(nhx+x_height, desired_height), nwx:min(nwx+x_width, desired_width)] = x[0:min(x_height, desired_height-nhx), 0:min(x_width, desired_width-nwx)]
+        return new_x 

@@ -8,7 +8,9 @@ Created on Fri Sep 25 16:36:41 2020
 
 import torch.nn as nn
 import torch
+from torchvision import transforms
 torch.manual_seed(0)
+normalize = transforms.Normalize([0.5], [0.5])
 
 class CNN(nn.Module):
     def __init__(self, input_shape):
@@ -46,14 +48,14 @@ def train_cnn_model(model, train_loader, test_loader, epochs):
         
     criterion = nn.CrossEntropyLoss()
     cnn_optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
-    
+
     for epoch in range(epochs):  # loop over the dataset multiple times
 
         running_loss = 0.0
         for i, data in enumerate(train_loader, 0):
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = data
-            
+
             Tensor = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
             
             inputs, labels = inputs.type(Tensor).to(device), labels.to(device)

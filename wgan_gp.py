@@ -48,7 +48,7 @@ class Generator(nn.Module):
 			nn.LeakyReLU(0.2, inplace=True),
 
 			nn.Conv2d(32, self.image_shape[0], 3, stride=1, padding=1),
-			nn.Sigmoid()
+			nn.Tanh()
 		)
 
 	def forward(self, z):

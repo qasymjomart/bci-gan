@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader, TensorDataset
 from torch.autograd import Variable
+from torchvision import transforms
 
 import torch.nn as nn
 import torch.autograd as autograd
@@ -51,7 +52,7 @@ class Generator(nn.Module):
 			# nn.BatchNorm2d(128, 0.8),
 			# nn.ReLU(),
 			nn.Conv2d(32, self.image_shape[0], 3, stride=1, padding=1),
-			nn.Sigmoid()
+			nn.Tanh()
 		)
 
 	def forward(self, z):
@@ -120,9 +121,9 @@ def train_model(train_loader, generator, discriminator,
 	device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 	real_label = 1.0
 	fake_label = 0.0
+
 	for epoch in range(num_epochs):
 		for i, (edata, _) in enumerate(train_loader):
-			
 			# ---------------------
 			#  Train Discriminator
 			# ---------------------
