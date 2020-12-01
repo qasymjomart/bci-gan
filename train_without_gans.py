@@ -34,20 +34,20 @@ args = argparse.parse_args()
 train_type = args.train_type
 
 # Data and training parameters
-height = 16
-width = 76
+height = 8
+width = 128
 depth = 1
 image_shape = (depth, height, width)
 batch_size = 32
 lr = 0.0001
-num_epochs= 300
+num_epochs= 100
 accuracies = []
 
 if train_type == 'subject-specific':
-	no_samples= 144
+	no_samples= 150
 	sub_idxs = [0,1,2,3,4,5,6,7,8,9]
 	
-	data_load = Data_loader(dataset_name = 'TenHealthyData')
+	data_load = Data_loader(dataset_name = 'BNCI2015003')
 	data, test_data = data_load.subject_specific(normalize = True)
 	normalize = transforms.Normalize([0.5], [0.5])
 	
@@ -90,10 +90,10 @@ if train_type == 'subject-specific':
 		f.write(str(accuracies))
 		
 elif train_type == 'subject-independent':
-	sample_sizes = [20, 50, 100, 150, 200, 250, 288]
+	sample_sizes = 150
 	sub_idxs = [0,1,2,3,4,5,6,7,8,9]
 	normalize = transforms.Normalize([0.5], [0.5])
-	data_load = Data_loader(dataset_name = 'TenHealthyData')
+	data_load = Data_loader(dataset_name = 'BNCI2015003')
 	accuracies = {}
 	for sample_size in sample_sizes:
 		accuracies[str(sample_size)] = []
@@ -121,7 +121,7 @@ elif train_type == 'subject-independent':
 			test_dataloader = DataLoader(test_tensor, batch_size = batch_size, shuffle = False)
 			
 			model = CNN(image_shape)
-			accuracy = train_cnn_model(model, train_dataloader, test_dataloader, epochs=300)
+			accuracy = train_cnn_model(model, train_dataloader, test_dataloader, epochs=num_epochs)
 			print("Accuracy: " + str(accuracy) + " sub: " + str(sub))
 			accuracies[str(sample_size)].append(accuracy)
 			del model, x_train, x_test, y_train, y_test, train_dataloader, train_tensor, test_dataloader, test_tensor

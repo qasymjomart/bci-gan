@@ -1,6 +1,7 @@
 /__pycache__
 /0and1norm
 /1minus1norm
+/ss
 *.pickle
 *.png
 *.txt

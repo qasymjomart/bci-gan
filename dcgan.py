@@ -130,6 +130,7 @@ def train_model(train_loader, generator, discriminator,
 			optimizer_discriminator.zero_grad()
 			real_images = edata.to(device)
 			labels = torch.full((real_images.size(0),1), real_label, dtype=torch.float, device=device)
+			labels = labels + (0.1**0.5)*torch.randn((real_images.size(0),1), device=device)
 			real_validity = discriminator(real_images)
 			d_loss_real = adversarial_loss(real_validity, labels)
 			d_loss_real.backward()
@@ -147,6 +148,8 @@ def train_model(train_loader, generator, discriminator,
 			# -----------------
 			#  Train Generator
 			# -----------------
+			z = Variable(Tensor(np.random.normal(0, 1, (real_images.shape[0], latent_dim))))
+			fake_images = generator(z)
 			optimizer_generator.zero_grad()
 			labels.fill_(real_label)
 			fake_g_validity = discriminator(fake_images)
