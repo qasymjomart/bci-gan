@@ -12,5 +12,5 @@ To train models, use files starting with 'train_'. Select and hardcode parameter
 <pre><code>python train_gan_test.py --gan_type {dcgan (default), wgan_gp, vae}
 </code></pre>
 
-<pre><code>python train_subject_specific.py --train_type {subject-specific, subject-independent}
+<pre><code>python train_without_gans.py --train_type {subject-specific, subject-independent}
 </code></pre>
