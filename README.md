@@ -1,4 +1,4 @@
-# A code implementation of the paper "Data Augmentation for P300-based Brain-Computer Interfaces Using Generative Adversarial Networks"
+# Data Augmentation for P300-based Brain-Computer Interfaces Using Generative Adversarial Networks
 
 The paper is available on https://ieeexplore.ieee.org/abstract/document/9385317
 
