@@ -1,6 +1,6 @@
-# This is a code implementation of the paper "Data Augmentation for P300-based Brain-Computer Interfaces Using Generative Adversarial Networks"
+# A code implementation of the paper "Data Augmentation for P300-based Brain-Computer Interfaces Using Generative Adversarial Networks"
 
-Available on https://ieeexplore.ieee.org/abstract/document/9385317
+The paper is available on https://ieeexplore.ieee.org/abstract/document/9385317
 
 In this project, the application of GANs to augment EEG-ERP data is investigated.
 
